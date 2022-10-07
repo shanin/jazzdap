@@ -1,0 +1,10 @@
+preprocess:
+  data_path: data/raw/weimar
+  youtube_index: csv_youtube.csv
+  audio_dir: audio
+  output_dir: data/preprocessed
+  output_file: csv_youtube_filtered.csv
+dataset:
+  data_path: ../data/weimar
+  youtube_index: csv_youtube.csv
+  audio_dir: audio
