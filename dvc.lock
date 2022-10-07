@@ -1,0 +1,25 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: python src/preprocess.py params.yaml
+    deps:
+    - path: data/raw
+      md5: fa8bb18b2f14ba0051289ef28fa229c3.dir
+      size: 3014405289
+      nfiles: 1516
+    - path: src/preprocess.py
+      md5: 092c8478dbbb3b3a74c28097a8fc1b3c
+      size: 1800
+    params:
+      params.yaml:
+        preprocess:
+          data_path: data/raw/weimar
+          youtube_index: csv_youtube.csv
+          audio_dir: audio
+          output_dir: data/preprocessed
+          output_file: csv_youtube_filtered.csv
+    outs:
+    - path: data/preprocessed
+      md5: aa4be658b6c29b56c0b1589e197130ed.dir
+      size: 138162
+      nfiles: 1
