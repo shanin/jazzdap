@@ -1,0 +1,10 @@
+stages:
+  preprocess:
+    cmd: python src/preprocess.py params.yaml
+    deps:
+    - data/raw
+    - src/preprocess.py
+    params:
+    - preprocess
+    outs:
+    - data/preprocessed
