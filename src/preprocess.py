@@ -11,25 +11,6 @@ from utils import load_config
 def get_metadata(config):
     return pd.read_csv(os.path.join(config['data_path'], config['youtube_index']))
 
-### remove
-def cut_solos(config):
-    metadata = get_metadata(config)
-    file_list = os.listdir(os.path.join(config['data_path'], config['audio_dir']))
-    for _, row in metadata.iterrows():
-        if f'{row.youtube_id}.mp3' in file_list:
-            data, sample_rate = torchaudio.load(
-                os.path.join(
-                    config['data_path'], 
-                    config['audio_dir'], 
-                    f'{row.youtube_id}.mp3'
-                )
-            )
-            start = floor(row.solo_start_sec * sample_rate)
-            stop = floor(row.solo_end_sec * sample_rate)
-            solo = data[:, start:stop]
-            torchaudio.save('tmp.mp3', data)
-            break
-
 def filter_metadata(config):
     metadata = get_metadata(config)
     file_list = os.listdir(os.path.join(config['data_path'], config['audio_dir']))

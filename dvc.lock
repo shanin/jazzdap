@@ -1,15 +1,32 @@
 schema: '2.0'
 stages:
+  download_packages:
+    cmd: python src/download_packages.py params.yaml
+    deps:
+    - path: src/download_packages.py
+      md5: ca4ee7b48e0edcc6e4884733b51660d3
+      size: 622
+    params:
+      params.yaml:
+        download_packages:
+          package_dir: packages
+          packages:
+            baseline_1: https://github.com/dogacbasaran/ismir2018_dominant_melody_estimation.git
+    outs:
+    - path: packages
+      md5: 203ab68962f0c085cb3942d44bf26297.dir
+      size: 96515084
+      nfiles: 210
   preprocess:
     cmd: python src/preprocess.py params.yaml
     deps:
     - path: data/raw
-      md5: fa8bb18b2f14ba0051289ef28fa229c3.dir
-      size: 3014405289
-      nfiles: 1516
+      md5: 8ce668f966e5e36dec924281785e02f0.dir
+      size: 3024384203
+      nfiles: 1569
     - path: src/preprocess.py
-      md5: 092c8478dbbb3b3a74c28097a8fc1b3c
-      size: 1800
+      md5: 873f681c0b489164d217956c06a9c1f4
+      size: 1693
     params:
       params.yaml:
         preprocess:
@@ -18,8 +35,9 @@ stages:
           audio_dir: audio
           output_dir: data/preprocessed
           output_file: csv_youtube_filtered.csv
+          wav_dir: data/preprocessed/wdb_wavs
     outs:
     - path: data/preprocessed
-      md5: aa4be658b6c29b56c0b1589e197130ed.dir
-      size: 138162
-      nfiles: 1
+      md5: 22e864fd0c6b228b1c855bdb69e1aae1.dir
+      size: 5093899408
+      nfiles: 298

@@ -1,4 +1,12 @@
 stages:
+  download_packages:
+    cmd: python src/download_packages.py params.yaml
+    deps:
+    - src/download_packages.py
+    params:
+    - download_packages
+    outs:
+    - packages
   preprocess:
     cmd: python src/preprocess.py params.yaml
     deps:
