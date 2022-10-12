@@ -16,3 +16,13 @@ stages:
     - preprocess
     outs:
     - data/preprocessed
+  baseline:
+    cmd: conda run -n jazzdap_baseline python src/baseline.py params.yaml
+    deps:
+    - data/preprocessed
+    - packages
+    - src/baseline.py
+    params:
+    - preprocess
+    outs:
+    - data/baseline_output

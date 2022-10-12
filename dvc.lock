@@ -41,3 +41,31 @@ stages:
       md5: 22e864fd0c6b228b1c855bdb69e1aae1.dir
       size: 5093899408
       nfiles: 298
+  baseline:
+    cmd: conda run -n jazzdap_baseline python src/baseline.py params.yaml
+    deps:
+    - path: data/preprocessed
+      md5: 22e864fd0c6b228b1c855bdb69e1aae1.dir
+      size: 5093899408
+      nfiles: 298
+    - path: packages
+      md5: a7263057bd9d63877e163f37f07a12df.dir
+      size: 96527633
+      nfiles: 211
+    - path: src/baseline.py
+      md5: 3de655f378db3e76634572a473679350
+      size: 3518
+    params:
+      params.yaml:
+        preprocess:
+          data_path: data/raw/weimar
+          youtube_index: csv_youtube.csv
+          audio_dir: audio
+          output_dir: data/preprocessed
+          output_file: csv_youtube_filtered.csv
+          wav_dir: data/preprocessed/wdb_wavs
+    outs:
+    - path: data/baseline_output
+      md5: d8ebf549a7c00cb5dfc3cfea4a849b3b.dir
+      size: 7139804657
+      nfiles: 595
