@@ -11,18 +11,21 @@ stages:
     cmd: python src/preprocess.py params.yaml
     deps:
     - data/raw
+    - src/dataset.py
     - src/preprocess.py
     params:
+    - dataset
     - preprocess
+    - shared
     outs:
-    - data/preprocessed
+    - exp/preprocessed
   baseline:
     cmd: conda run -n jazzdap_baseline python src/baseline.py params.yaml
     deps:
-    - data/preprocessed
+    - exp/preprocessed
     - packages
     - src/baseline.py
     params:
     - preprocess
     outs:
-    - data/baseline_output
+    - exp/baseline_output

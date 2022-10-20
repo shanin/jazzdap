@@ -8,15 +8,19 @@ import h5py
 import parsing
 
 import numpy as np
+from tqdm import tqdm
 
-from utils import load_config
+from utils import load_config, safe_mkdir
 from source_filter_model import main as sfm
 from predict_on_single_audio_CRNN import load_model, get_prediction, save_output
 
-def save_HF0(hf0_dict, config, trackname):
-    if not os.path.exists(config['output_folder']):
-        os.mkdir(config['output_folder'])
-    output_path = os.path.join(config['output_folder'], config['h5py_folder'])
+def save_HF0(hf0_dict, config_shared, config, trackname):
+    output_path = os.path.join(
+        config_shared['exp_folder'],
+        config['output_folder'], 
+        config['h5py_folder']
+    )
+    safe_mkdir(output_path)
     if not os.path.exists(output_path):
         os.mkdir(output_path)
 
@@ -55,15 +59,17 @@ def save_HF0(hf0_dict, config, trackname):
     ### add parameters file??
 
 #go to packages/baseline_1/predict/extract_HF0 for details
-def extract_HF0(config, filename):
+def extract_HF0(config_shared, config, filename):
     Fs = config['Fs']
     hop = config['hop'] / Fs
-    pitch_corrected = config['pitch_corrected']
-
-    #train_parameter = 'HF0_standard'
+    
+    input_path = os.path.join(
+        config_shared['exp_folder'],
+        config['input_data']
+    )
     
     track_name_original = filename.split('.wav')[0]
-    audio_fpath = '{0}/{1}'.format(config['input_data'], filename)
+    audio_fpath = os.path.join(input_path, filename)
     print('{0} - Processing'.format(track_name_original))
     input_args = [u'{0}'.format(audio_fpath), \
                   u'--samplingRate={0}'.format(Fs), \
@@ -85,28 +91,35 @@ def extract_HF0(config, filename):
     return sfm_output
 
 
-def run_baseline_single_call(config, filename):
-    hf0_dict = extract_HF0(config, filename)
-    save_HF0(hf0_dict, config, filename)
+def run_baseline_single_call(config_shared, config, filename, save_HF0_flag = False):
+    hf0_dict = extract_HF0(config_shared, config, filename)
+    
+    if save_HF0_flag:
+        save_HF0(hf0_dict, config_shared, config, filename)
 
     model_path = os.path.join(config['repo'], config['weights_path'])
     model = load_model(model_path)
     pitch_estimates = get_prediction(np.array(hf0_dict['HF0']), model)
     
-    output_folder = '{0}/{1}'.format(
+    output_folder = os.path.join(
+        config_shared['exp_folder'],
         config['output_folder'], 
         config['melody_folder']
     )
     output_file = filename.split('.wav')[0] + '.csv'
     if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
+        safe_mkdir(output_folder)
     save_output(pitch_estimates, os.path.join(output_folder, output_file))
     return pitch_estimates
 
 
-def run_baseline(config):
-    for filename in os.listdir(config['input_data']):
-        run_baseline_single_call(config, filename)
+def run_baseline(config_shared, config_local):
+    input_path = os.path.join(
+        config_shared['exp_folder'],
+        config_local['input_data']
+    )
+    for filename in tqdm(os.listdir(input_path)):
+        run_baseline_single_call(config_shared, config_local, filename)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -115,4 +128,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     config = load_config(args.config)
-    run_baseline(config['baseline'])
+    run_baseline(config['shared'], config['baseline'])

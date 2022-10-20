@@ -21,51 +21,61 @@ stages:
     cmd: python src/preprocess.py params.yaml
     deps:
     - path: data/raw
-      md5: 8ce668f966e5e36dec924281785e02f0.dir
-      size: 3024384203
-      nfiles: 1569
+      md5: d091b6486a51e12aaa40fc72bbddf108.dir
+      size: 3114361135
+      nfiles: 2531
+    - path: src/dataset.py
+      md5: fc51bd37ce0558f3412e55379e9999dc
+      size: 2450
     - path: src/preprocess.py
-      md5: 873f681c0b489164d217956c06a9c1f4
-      size: 1693
+      md5: 10c0c396f58cf6e749c8811c609cd92f
+      size: 1967
     params:
       params.yaml:
+        dataset:
+          metadata_path: preprocessed
+          youtube_index: csv_youtube_filtered.csv
+          audio_dir: audio
+          melody_dir: csv_melody
+          resample_rate: 22050
         preprocess:
-          data_path: data/raw/weimar
           youtube_index: csv_youtube.csv
           audio_dir: audio
-          output_dir: data/preprocessed
+          output_dir: preprocessed
           output_file: csv_youtube_filtered.csv
-          wav_dir: data/preprocessed/wdb_wavs
+          wav_dir: preprocessed/wdb_wavs
+        shared:
+          exp_folder: exp
+          raw_data: data/raw/weimar_small
     outs:
-    - path: data/preprocessed
-      md5: 22e864fd0c6b228b1c855bdb69e1aae1.dir
-      size: 5093899408
-      nfiles: 298
+    - path: exp/preprocessed
+      md5: 76107708247f5983b261a3b5d2de3ff2.dir
+      size: 113356220
+      nfiles: 7
   baseline:
     cmd: conda run -n jazzdap_baseline python src/baseline.py params.yaml
     deps:
-    - path: data/preprocessed
-      md5: 22e864fd0c6b228b1c855bdb69e1aae1.dir
-      size: 5093899408
-      nfiles: 298
+    - path: exp/preprocessed
+      md5: 76107708247f5983b261a3b5d2de3ff2.dir
+      size: 113356220
+      nfiles: 7
     - path: packages
-      md5: a7263057bd9d63877e163f37f07a12df.dir
+      md5: 3ad73d4706c42f55113b5d05a726163f.dir
       size: 96527633
       nfiles: 211
     - path: src/baseline.py
-      md5: 3de655f378db3e76634572a473679350
-      size: 3518
+      md5: 23854e9aa7b7b5de3424b7c67892a1a1
+      size: 3854
     params:
       params.yaml:
         preprocess:
-          data_path: data/raw/weimar
           youtube_index: csv_youtube.csv
           audio_dir: audio
-          output_dir: data/preprocessed
+          output_dir: preprocessed
           output_file: csv_youtube_filtered.csv
-          wav_dir: data/preprocessed/wdb_wavs
+          wav_dir: preprocessed/wdb_wavs
     outs:
-    - path: data/baseline_output
-      md5: d8ebf549a7c00cb5dfc3cfea4a849b3b.dir
-      size: 7139804657
-      nfiles: 595
+    - path: exp/baseline_output
+      md5: f3f366533997fbe401ce9decf463d3fc.dir
+      size: 2029272
+      nfiles: 6
