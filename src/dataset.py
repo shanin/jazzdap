@@ -32,11 +32,15 @@ class WeimarDB(Dataset):
             config_shared['raw_data'], 
             config_local['audio_dir']
         )
-        self._resample_rate = config_local['resample_rate']
+
+        if 'resample_rate' in config_local:
+            self._resample_rate = config_local['resample_rate']
+        else:
+            self._resample_rate = None
         
         self._init_column_names()
         self._init_database_cursor(config_local)
-        self._fetch_data_from_database()
+        self._fetch_data_from_database(config_local)
         self._init_idx_dict(config_local)
 
     def _init_idx_dict(self, config):
@@ -69,13 +73,17 @@ class WeimarDB(Dataset):
             'trackid', 'compid', 'recordid', 'filename_track', 'lineup',
             'mbzid', 'trackno', 'recordingdate'
         ]
+        self._beats_columns = [
+            'beatid', 'melid', 'onset', 'bar', 'beat', 'signature', 'chord',
+            'form', 'bass_pitch', 'chorus_id'
+        ]
 
     def _init_database_cursor(self, config):
         self._connect = sqlite3.connect(config['weimardb'])
         self._cursor = self._connect.cursor()
 
 
-    def _fetch_data_from_database(self):
+    def _fetch_data_from_database(self, config):
         colnames_str = ', '.join(self._transcription_info_columns)
         query = f'SELECT {colnames_str} FROM transcription_info'
         res = self._cursor.execute(query)
@@ -100,6 +108,13 @@ class WeimarDB(Dataset):
         self._track_info = pd.DataFrame(res.fetchall())
         self._track_info.columns = self._track_info_columns
 
+        if config['load_beats'] == True:
+            colnames_str = ', '.join(self._beats_columns)
+            query = f'SELECT {colnames_str} FROM beats'
+            res = self._cursor.execute(query)
+            self._beats = pd.DataFrame(res.fetchall())
+            self._beats.columns = self._beats_columns
+
     def _get_stop_sec(self, start_sec, melody):
         stop_sec = start_sec + melody.onset.max() + 2
         return stop_sec
@@ -117,6 +132,7 @@ class WeimarDB(Dataset):
         for key in MISTAKES:
             filename = filename.replace(key, MISTAKES[key])
         melody = self._melody[self._melody.melid == melid]
+        beats = self._beats[self._beats.melid == melid]
         
         solostart = max(row.solostart_sec.iloc[0], 0) #
         solostop = self._get_stop_sec(solostart, melody)
@@ -147,7 +163,8 @@ class WeimarDB(Dataset):
             'audio': solo,
             'sample_rate': sample_rate,
             'query': row.filename_solo.iloc[0],
-            'melody': melody
+            'melody': melody,
+            'beats': beats
         }
 
         return sample

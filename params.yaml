@@ -19,6 +19,7 @@ dataset:
   resample_rate: 22050
   weimardb: data/raw/weimar/wjazzd.db
   subset: data/raw/weimar_small/melid_subset.csv
+  load_beats: False
   full: True
 baseline:
   repo: packages/baseline_1
