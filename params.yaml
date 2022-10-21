@@ -1,10 +1,37 @@
+shared:
+  exp_folder: exp
+  raw_data: data/raw/weimar
+download_packages:
+  package_dir: packages
+  packages:
+    baseline_1: https://github.com/dogacbasaran/ismir2018_dominant_melody_estimation.git
 preprocess:
-  data_path: data/raw/weimar
   youtube_index: csv_youtube.csv
   audio_dir: audio
-  output_dir: data/preprocessed
+  output_dir: preprocessed
   output_file: csv_youtube_filtered.csv
+  wav_dir: preprocessed/wdb_wavs
 dataset:
-  data_path: ../data/weimar
-  youtube_index: csv_youtube.csv
-  audio_dir: audio
+  metadata_path: preprocessed
+  youtube_index: csv_youtube_filtered.csv
+  audio_dir: original_audio
+  melody_dir: csv_melody
+  resample_rate: 22050
+  weimardb: data/raw/weimar/wjazzd.db
+  subset: data/raw/weimar_small/melid_subset.csv
+  full: True
+baseline:
+  repo: packages/baseline_1
+  input_data: preprocessed/wdb_wavs
+  Fs: 22050
+  hop: 256.0
+  pitch_corrected: False
+  output_folder: baseline_output
+  h5py_folder: h5py_files
+  weights_path: predict/weights_C-RNN.h5
+  melody_folder: csv_melody
+baseline_evaluation:
+  output_folder: baseline_evaluation
+  predictions_folder: baseline_output/csv_melody
+  pianoroll_folder: pianoroll
+  output_file: evaluation.csv

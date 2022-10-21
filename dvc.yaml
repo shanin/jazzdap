@@ -1,12 +1,4 @@
 stages:
-  download_packages:
-    cmd: python src/download_packages.py params.yaml
-    deps:
-    - src/download_packages.py
-    params:
-    - download_packages
-    outs:
-    - packages
   preprocess:
     cmd: python src/preprocess.py params.yaml
     deps:
@@ -19,11 +11,18 @@ stages:
     - shared
     outs:
     - exp/preprocessed
+  download_packages:
+    cmd: python src/download_packages.py params.yaml
+    deps:
+    - src/download_packages.py
+    params:
+    - download_packages
+    outs:
+    - packages
   baseline:
     cmd: conda run -n jazzdap_baseline python src/baseline.py params.yaml
     deps:
     - exp/preprocessed
-    - packages
     - src/baseline.py
     params:
     - preprocess
