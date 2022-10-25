@@ -35,4 +35,7 @@ baseline_evaluation:
   output_folder: baseline_evaluation
   predictions_folder: baseline_output/csv_melody
   pianoroll_folder: pianoroll
-  output_file: evaluation.csv
+  b1_output_file: sf_nmf_evaluation.csv
+  melodia_suffix: _vamp_mtg-melodia_melodia_melody.csv
+  melodia_folder: baseline_output/melodia
+  b2_output_file: melodia_evaluation.csv

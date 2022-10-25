@@ -7,9 +7,10 @@ import mir_eval
 
 from utils import load_config, hertz2weimar, comparative_pianoroll, weimar2hertz
 from dataset import WeimarDB
+from tqdm import tqdm
 
-
-def get_predictions(config, sample, scale = 'weimar', filter = True):
+### delete
+def get_predictions_deprecated(config, sample, scale = 'weimar', filter = True):
     predictions_file = '{0}/{1}/{2}.csv'.format(
         config['shared']['exp_folder'],
         config['baseline_evaluation']['predictions_folder'],
@@ -51,12 +52,59 @@ def make_pianoroll_comparison(config, sample):
         title = sample['query']
     )
 
+def get_baseline_evaluation_result(config, baseline = 'melodia'):
+    if baseline == 'melodia':
+        path = os.path.join(
+            config['shared']['exp_folder'],
+            config['baseline_evaluation']['output_folder'],
+            config['baseline_evaluation']['b2_output_file']
+        )
+    else:
+        path = os.path.join(
+            config['shared']['exp_folder'],
+            config['baseline_evaluation']['output_folder'],
+            config['baseline_evaluation']['b1_output_file']
+        )
+    return pd.read_csv(path)
+
+def get_output_filename_for_pianoroll(config, sample):
+    filename = os.path.join(
+        config['shared']['exp_folder'],
+        config['baseline_evaluation']['output_folder'],
+        config['baseline_evaluation']['pianoroll_folder'],
+        sample['query'] + '.png'
+    )
+    return filename
+
 
 def make_pianoroll_plots(config):
+    eval_mel = get_baseline_evaluation_result(config, 'melodia')
+    eval_sfnmf = get_baseline_evaluation_result(config, 'sfnmf')
     wdb = WeimarDB(config)
-    for idx in range(len(wdb)):
-        sample = wdb[idx]
-        make_pianoroll_comparison(config, sample)
+    counter = 0
+    for sample in tqdm(wdb):
+        counter += 1
+        if counter < 200:
+            pass
+        else:
+            sfnmf_pred = get_predictions(config, sample, baseline = 'sfnmf')
+            melodia_pred = get_predictions(config, sample, baseline = 'melodia')
+            mel_stats = eval_mel[eval_mel.Name == sample['query']].iloc[0].to_dict()
+            sf_stats = eval_sfnmf[eval_sfnmf.Name == sample['query']].iloc[0].to_dict()
+            filename = get_output_filename_for_pianoroll(config, sample)
+            try:
+                comparative_pianoroll(
+                    sample['melody'],
+                    sfnmf_pred,
+                    melodia_pred,
+                    output_file = filename,
+                    title = sample['query'],
+                    eval_mel = mel_stats,
+                    eval_sfnmf = sf_stats
+                )
+            except:
+                print(sample['query'], ' : image is too large')
+
 
 def get_quantized_labels(sample, predictions):
     time_steps = predictions.onset
@@ -121,7 +169,7 @@ def melody_evaluation(config, sample, cut = True):
     return evaluation_results
 
 
-def evaluate(jazzdap_config):
+def evaluate_old(jazzdap_config):
     dataset_config = jazzdap_config['dataset']
     eval_config = jazzdap_config['baseline_evaluation']
     wdb = WeimarDB(dataset_config)
@@ -135,6 +183,118 @@ def evaluate(jazzdap_config):
     result.to_csv(os.path.join(eval_config['output_folder'], eval_config['output_file']))
     return result
 
+def get_prediction_filename(config, sample, baseline = 'melodia'):
+    if baseline == 'melodia':
+        predictions_file = '{0}/{1}/{2}{3}'.format(
+            config['shared']['exp_folder'],
+            config['baseline_evaluation']['melodia_folder'],
+            sample['query'].replace('#1_Solo', ''),
+            config['baseline_evaluation']['melodia_suffix']
+        )
+    else:
+        predictions_file = '{0}/{1}/{2}.csv'.format(
+            config['shared']['exp_folder'],
+            config['baseline_evaluation']['predictions_folder'],
+            sample['query']
+        )
+    return predictions_file
+
+def get_predictions(config, sample, scale = 'weimar', filter = True, baseline = 'melodia', to_int = False):
+    predictions_file = get_prediction_filename(config, sample, baseline)
+    predictions = pd.read_csv(predictions_file, header = None)
+    predictions.columns = ['onset', 'pitch']
+    if filter:
+        predictions = predictions[predictions.pitch > 0]
+    if scale == 'weimar':
+        predictions['pitch'] = hertz2weimar(predictions['pitch'], to_int = to_int)
+    return predictions
+
+
+def fill_pauses(sample):
+    onset = sample['melody']['onset']
+    offset = sample['melody']['onset'] +  sample['melody']['duration']
+    pitch = sample['melody']['pitch']
+    rows = []
+    for index in range(onset.shape[0]):
+        row = {
+            'pitch': weimar2hertz(pitch.iloc[index]),
+            'onset': onset.iloc[index],
+            'voicing': 1
+        }
+        rows.append(row)
+        row = {
+            'pitch': 0,
+            'onset': offset.iloc[index],
+            'voicing': 0
+        }
+        rows.append(row)
+    return pd.DataFrame(rows)
+    
+def cut_margins(pred, ground_truth):
+    pred = pred[pred.onset >= ground_truth.onset.min()]
+    pred = pred[pred.onset <= ground_truth.onset.max()]
+    return pred
+
+def evaluate_single_sample(config, sample, baseline):
+    predictions = get_predictions(
+        config, 
+        sample, 
+        scale = 'hertz', 
+        filter = False,
+        baseline = baseline
+    )
+    ground_truth = fill_pauses(sample)
+    predictions = cut_margins(predictions, ground_truth)
+    res_gt_pitch, res_gt_times = mir_eval.melody.resample_melody_series(
+        ground_truth.onset,
+        ground_truth.pitch,
+        ground_truth.voicing,
+        predictions.onset
+    )
+    (ref_v, ref_c, est_v, est_c) = mir_eval.melody.to_cent_voicing(
+        np.arange(predictions.shape[0]), 
+        res_gt_pitch,
+        np.arange(predictions.shape[0]),
+        predictions.pitch.values
+    )
+    vr, vfa = mir_eval.melody.voicing_measures(ref_v, est_v)
+    rpa = mir_eval.melody.raw_pitch_accuracy(ref_v, ref_c, est_v, est_c, cent_tolerance=80)
+    rca = mir_eval.melody.raw_chroma_accuracy(ref_v, ref_c, est_v, est_c, cent_tolerance=80)
+    oa = mir_eval.melody.overall_accuracy(ref_v, ref_c, est_v, est_c, cent_tolerance=80)
+    eval_result = {
+        'Name': sample['query'],
+        'Voicing Recall': vr,
+        'Voicing False Alarm': vfa,
+        'Raw Pitch Accuracy': rpa,
+        'Raw Chroma Accuracy': rca,
+        'Overall Accuracy': oa
+    }
+    return eval_result
+
+
+def evaluate(config):
+    wdb = WeimarDB(config)
+    eval_sf_nmf_rcnn = []
+    eval_melodia = []
+    for sample in tqdm(wdb):
+        eval_sf_nmf_rcnn.append(
+            evaluate_single_sample(config, sample, baseline = 'sf_nmf_rcnn')
+        )
+        eval_melodia.append(
+            evaluate_single_sample(config, sample, baseline = 'melodia')
+        )
+    output_file_sf_nmf = os.path.join(
+        config['shared']['exp_folder'],
+        config['baseline_evaluation']['output_folder'],
+        config['baseline_evaluation']['b1_output_file']
+    )
+    output_file_melodia = os.path.join(
+        config['shared']['exp_folder'],
+        config['baseline_evaluation']['output_folder'],
+        config['baseline_evaluation']['b2_output_file']
+    ) 
+    pd.DataFrame(eval_sf_nmf_rcnn).to_csv(output_file_sf_nmf, float_format='%.3f')
+    pd.DataFrame(eval_melodia).to_csv(output_file_melodia, float_format='%.3f')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -143,5 +303,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     config = load_config(args.config)
+    #evaluate(config)
     make_pianoroll_plots(config)
-    evaluate(config)

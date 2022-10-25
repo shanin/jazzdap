@@ -1,4 +1,3 @@
-from glob import escape
 import os
 import pandas as pd
 from torch.utils.data import Dataset
@@ -37,10 +36,11 @@ class WeimarDB(Dataset):
             self._resample_rate = config_local['resample_rate']
         else:
             self._resample_rate = None
-        
+        self.load_beats = config_local['load_beats']
+
         self._init_column_names()
         self._init_database_cursor(config_local)
-        self._fetch_data_from_database(config_local)
+        self._fetch_data_from_database()
         self._init_idx_dict(config_local)
 
     def _init_idx_dict(self, config):
@@ -83,7 +83,7 @@ class WeimarDB(Dataset):
         self._cursor = self._connect.cursor()
 
 
-    def _fetch_data_from_database(self, config):
+    def _fetch_data_from_database(self):
         colnames_str = ', '.join(self._transcription_info_columns)
         query = f'SELECT {colnames_str} FROM transcription_info'
         res = self._cursor.execute(query)
@@ -108,7 +108,7 @@ class WeimarDB(Dataset):
         self._track_info = pd.DataFrame(res.fetchall())
         self._track_info.columns = self._track_info_columns
 
-        if config['load_beats'] == True:
+        if self.load_beats:
             colnames_str = ', '.join(self._beats_columns)
             query = f'SELECT {colnames_str} FROM beats'
             res = self._cursor.execute(query)
@@ -132,7 +132,11 @@ class WeimarDB(Dataset):
         for key in MISTAKES:
             filename = filename.replace(key, MISTAKES[key])
         melody = self._melody[self._melody.melid == melid]
-        beats = self._beats[self._beats.melid == melid]
+        
+        if self.load_beats:
+            beats = self._beats[self._beats.melid == melid]
+        else:
+            beats = None
         
         solostart = max(row.solostart_sec.iloc[0], 0) #
         solostop = self._get_stop_sec(solostart, melody)
