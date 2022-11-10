@@ -5,6 +5,8 @@ import torchaudio
 from torchaudio.transforms import Resample
 from math import floor
 import sqlite3
+import IPython.display as ipd
+import matplotlib.pyplot as plt
 
 WDB_SIZE = 456
 
@@ -22,6 +24,114 @@ MISTAKES = {
     "Dave Holland_TakeTheColtrane_Orig": "DaveHolland_TakeTheColtrane_Orig"
 }
 
+SOLOSTART_CORRECTIONS = {
+    43: 29.9,
+    64: -15.345,
+    79: 93.1722,
+    82: -93.1722,
+    171: -64.85,
+    309: -212.5,
+    382: 205.9
+}
+
+class WeimarSolo(object):
+    def __init__(self):
+        self.melid = None
+        self.trackid = None
+        self.filename = None
+        self.audio = None
+        self.solostart = None
+        self.solostop = None
+        self.melody = None
+        self.beats = None
+        self.sample_rate = None
+        self.resample_rate = None
+
+    def resampled_audio(self):   
+        transform = Resample(
+            orig_freq = self.sample_rate, 
+            new_freq = self.resample_rate
+        )
+        return transform(self.audio)
+
+    def play(self):
+        print(self.filename)
+        return ipd.Audio(rate = self.sample_rate, data = self.audio)
+
+    def __str__(self):
+        return(self.filename)
+    
+    def __repr__(self):
+        return(self.filename)
+
+    def export_to_sv(self):
+        pd.DataFrame(
+            {
+                'onset': self.melody.onset + self.solostart,
+                'duration': self.melody.duration,
+                'pitch': self.melody.pitch
+            }
+        ).to_csv(self.filename + '.melody.csv', index = False)
+
+    def pianoroll(self, predictions = None, beats = None, 
+            output_file = None, title = None, scale_factor = 0.7, height = 10):
+
+        width = min(self.melody.onset.max() * scale_factor, 400)
+        _, ax = plt.subplots(figsize=(width, height))
+        
+        lowest_note = int(self.melody.pitch.min())
+        highest_note = int(self.melody.pitch.max())
+        first_onset = self.melody.onset.min() - 2
+        last_onset = self.melody.onset.max() + 2
+
+        #octave boundaries
+        for index in range(lowest_note - 1, highest_note + 1):
+            if index % 12 == 11:
+                color_ = 'gray'
+            else:
+                color_ = 'gainsboro'
+            ax.plot(
+                [first_onset, last_onset], 
+                [index + 0.5, index + 0.5], 
+                color = color_,
+                linewidth = 0.4,
+                label='_nolegend_'
+            )
+
+        #pianoroll background
+        for index in range(lowest_note, highest_note +1):
+            if (index % 12) in [1, 3, 6, 8, 10]:
+                ax.fill_between(
+                    [first_onset, last_onset], 
+                    [index - 0.5, index - 0.5], 
+                    [index + 0.5, index + 0.5], 
+                    color = 'whitesmoke',
+                    label='_nolegend_'
+                )
+
+        #ground truth onset plot
+        ax.scatter(self.melody.onset, self.melody.pitch, marker='.', color = 'black')
+        
+        #plot note duration
+        for _, row in self.melody.iterrows():
+            time = [row.onset, row.onset + row.duration]
+            pitch = [row.pitch, row.pitch]
+            ax.plot(time, pitch, color = 'black')
+
+        ax.set_yticks([24, 36, 48, 60, 72, 84])
+        ax.set_yticklabels(['C2', 'C3', 'C4', 'C5', 'C6', 'C7'])
+
+        plt.xlabel('seconds')
+        plt.ylabel('pitch')
+        plt.xlim(first_onset, last_onset)
+        plt.ylim(lowest_note - 0.5, highest_note + 0.5)
+        plt.title(self.__repr__())
+        if output_file:
+            plt.savefig(output_file, bbox_inches='tight')
+            plt.close()
+
+            
+
 class WeimarDB(Dataset):
     def __init__(self, config):
         config_shared = config['shared']
@@ -32,16 +142,12 @@ class WeimarDB(Dataset):
             config_local['audio_dir']
         )
 
-        if 'resample_rate' in config_local:
-            self._resample_rate = config_local['resample_rate']
-        else:
-            self._resample_rate = None
-        self.load_beats = config_local['load_beats']
-
+        self._resample_rate = config_local.get('resample_rate', None)
+        self.load_beats = config_local.get('load_beats', False)
         self._init_column_names()
         self._init_database_cursor(config_local)
-        self._fetch_data_from_database()
         self._init_idx_dict(config_local)
+
 
     def _init_idx_dict(self, config):
         if config['full']:
@@ -50,7 +156,8 @@ class WeimarDB(Dataset):
             with open(config['subset'], 'r') as file:
                 line = file.readline()
             self._idx_dict = [int(elem) for elem in line.split(',')]
-        
+
+
     def _init_column_names(self):
         self._melody_columns = [
             'eventid', 'melid', 'onset', 'pitch', 'duration', 'period', 
@@ -78,97 +185,83 @@ class WeimarDB(Dataset):
             'form', 'bass_pitch', 'chorus_id'
         ]
 
+
     def _init_database_cursor(self, config):
         self._connect = sqlite3.connect(config['weimardb'])
         self._cursor = self._connect.cursor()
 
 
-    def _fetch_data_from_database(self):
+    def _parse_transcription_info(self, solo):
         colnames_str = ', '.join(self._transcription_info_columns)
-        query = f'SELECT {colnames_str} FROM transcription_info'
-        res = self._cursor.execute(query)
-        self._transcription_info = pd.DataFrame(res.fetchall())
-        self._transcription_info.columns = self._transcription_info_columns
+        query = f'SELECT {colnames_str} FROM transcription_info WHERE melid = {solo.melid}'
+        transcription_info = pd.DataFrame(
+            self._cursor.execute(query).fetchall(), 
+            columns = self._transcription_info_columns
+        )
+        solo.trackid = transcription_info.trackid.values[0]
+        solo.solostart = max(transcription_info.solostart_sec.values[0], 0)
+        solo.solostart += SOLOSTART_CORRECTIONS.get(solo.melid, 0)
+        solo.solostop = solo.solostart + solo.melody.onset.max() + 2
 
-        colnames_str = ', '.join(self._solo_info_columns)
-        query = f'SELECT {colnames_str} FROM solo_info'
-        res = self._cursor.execute(query)
-        self._solo_info = pd.DataFrame(res.fetchall())
-        self._solo_info.columns = self._solo_info_columns
 
-        colnames_str = ', '.join(self._melody_columns)
-        query = f'SELECT {colnames_str} FROM melody'
-        res = self._cursor.execute(query)
-        self._melody = pd.DataFrame(res.fetchall())
-        self._melody.columns = self._melody_columns
-
+    def _parse_track_info(self, solo):
         colnames_str = ', '.join(self._track_info_columns)
-        query = f'SELECT {colnames_str} FROM track_info'
-        res = self._cursor.execute(query)
-        self._track_info = pd.DataFrame(res.fetchall())
-        self._track_info.columns = self._track_info_columns
+        query = f'SELECT {colnames_str} FROM track_info WHERE trackid = {solo.trackid}'
+        track_info = pd.DataFrame(
+            self._cursor.execute(query).fetchall(), 
+            columns = self._track_info_columns
+        )
+        filename = track_info.filename_track.values[0]
+        for key in MISTAKES:
+            filename = filename.replace(key, MISTAKES[key])
+        solo.filename = filename
+    
 
-        if self.load_beats:
-            colnames_str = ', '.join(self._beats_columns)
-            query = f'SELECT {colnames_str} FROM beats'
-            res = self._cursor.execute(query)
-            self._beats = pd.DataFrame(res.fetchall())
-            self._beats.columns = self._beats_columns
+    def _parse_melody(self, solo):
+        colnames_str = ', '.join(self._melody_columns)
+        query = f'SELECT {colnames_str} FROM melody WHERE melid = {solo.melid}'
+        solo.melody = pd.DataFrame(
+            self._cursor.execute(query).fetchall(), 
+            columns = self._melody_columns
+        )
 
-    def _get_stop_sec(self, start_sec, melody):
-        stop_sec = start_sec + melody.onset.max() + 2
-        return stop_sec
-        
 
-    def __len__(self):
-        return len(self._idx_dict)
+    def _parse_beats(self, solo):
+        colnames_str = ', '.join(self._beats_columns)
+        query = f'SELECT {colnames_str} FROM beats WHERE melid = {solo.melid}'
+        solo.beats = pd.DataFrame(
+            self._cursor.execute(query).fetchall(), 
+            columns = self._beats_columns
+        )
+
+
+    def _load_audio(self, solo):
+        audio, solo.sample_rate = torchaudio.load(
+            os.path.join(
+                self._audio_dir, 
+                f'{solo.filename}.wav'
+            )
+        )
+        sample_start = floor(solo.solostart * solo.sample_rate)
+        if solo.solostop:
+            sample_stop = floor(solo.solostop * solo.sample_rate)
+        else:
+            sample_stop = -1
+        solo.audio = audio[:, sample_start : sample_stop]
+
 
     def __getitem__(self, idx):
         
-        melid = self._idx_dict[idx]
-        row = self._transcription_info[self._transcription_info.melid == melid]
-        trackid = row.trackid.iloc[0]
-        filename = self._track_info[self._track_info.trackid == trackid].filename_track.iloc[0]
-        for key in MISTAKES:
-            filename = filename.replace(key, MISTAKES[key])
-        melody = self._melody[self._melody.melid == melid]
+        solo = WeimarSolo()
+        solo.melid = self._idx_dict[idx]
+        self._parse_melody(solo)
+        self._parse_beats(solo)
+        self._parse_transcription_info(solo)
+        self._parse_track_info(solo)
+        solo.resample_rate = self._resample_rate
+        self._load_audio(solo)
+        return solo
         
-        if self.load_beats:
-            beats = self._beats[self._beats.melid == melid]
-        else:
-            beats = None
-        
-        solostart = max(row.solostart_sec.iloc[0], 0) #
-        solostop = self._get_stop_sec(solostart, melody)
 
-        data, sample_rate = torchaudio.load(
-            os.path.join(
-                self._audio_dir, 
-                f'{filename}.wav'
-            )
-        )
-        sample_start = floor(solostart * sample_rate)
-        if solostop:
-            sample_stop = floor(solostop * sample_rate)
-        else:
-            sample_stop = -1
-
-        solo = data[:, sample_start : sample_stop]
-
-        if self._resample_rate:
-            transform = Resample(
-                orig_freq = sample_rate, 
-                new_freq = self._resample_rate
-            )
-            solo = transform(solo)
-            sample_rate = self._resample_rate
-        
-        sample = {
-            'audio': solo,
-            'sample_rate': sample_rate,
-            'query': row.filename_solo.iloc[0],
-            'melody': melody,
-            'beats': beats
-        }
-
-        return sample
+    def __len__(self):
+        return WDB_SIZE
