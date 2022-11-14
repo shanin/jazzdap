@@ -25,9 +25,9 @@ def precompute_HF0(config):
     wdb = WeimarDB(config)
     filename = '.resampled-sf-nmf-input.wav'
     for sample in wdb:
+        print(sample.melid, sample.filename)
         if 'melid_' + str(sample.melid).zfill(3) + '.npy' in os.listdir(output_path):
-            print(sample.melid)
-            pass
+            continue
         torchaudio.save(filename, sample.resampled_audio(), sample.resample_rate)
 
         Fs = config['sfnmf']['Fs']
