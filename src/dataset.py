@@ -23,7 +23,8 @@ MISTAKES = {
     "LesterYoung_D.B. Blues_Orig": "LesterYoung_D.B.Blues_Orig",
     "MilesDavis_Eighty-One_Orig": "MilesDavis_Eighty=One_Orig",
     "Dave Holland_TakeTheColtrane_Orig": "DaveHolland_TakeTheColtrane_Orig",
-    "ChrisPotter_InASentimentalMood_Orig": "ChrisPotter_InaSentimentalMood_Orig"
+    "ChrisPotter_InASentimentalMood_Orig": "ChrisPotter_InaSentimentalMood_Orig",
+    "MilesDavis_Gingerbreadboy_Orig": "MilesDavis_GingerbreadBoy_Orig" 
 }
 
 SOLOSTART_CORRECTIONS = {
@@ -49,12 +50,15 @@ class WeimarSolo(object):
         self.sample_rate = None
         self.resample_rate = None
         self.predicted_beats = None
+        self.performer = None
+        self.title = None
+        self.instrument = None
 
     def __str__(self):
         return(self.filename)
     
     def __repr__(self):
-        return(self.filename)
+        return(f'{self.performer} ({self.instrument}) - {self.title}')
 
     def resampled_audio(self):   
         transform = Resample(
@@ -81,7 +85,7 @@ class WeimarSolo(object):
         ).to_csv(self.filename + '.melody.csv', index = False)
 
     def play(self):
-        print(self.filename)
+        print(self.__repr__())
         return ipd.Audio(rate = self.sample_rate, data = self.audio)
 
     def pianoroll(self, predictions = None, beats = None, 
@@ -214,6 +218,17 @@ class WeimarDB(Dataset):
         solo.solostart += SOLOSTART_CORRECTIONS.get(solo.melid, 0)
         solo.solostop = solo.solostart + solo.melody.onset.max() + 2
 
+    def _parse_solo_info(self, solo):
+        colnames_str = ', '.join(self._solo_info_columns)
+        query = f'SELECT {colnames_str} FROM solo_info WHERE melid = {solo.melid}'
+        solo_info = pd.DataFrame(
+            self._cursor.execute(query).fetchall(), 
+            columns = self._solo_info_columns
+        )
+        solo.instrument = solo_info.instrument.values[0]
+        solo.performer = solo_info.performer.values[0]
+        solo.title = solo_info.title.values[0]
+
 
     def _parse_track_info(self, solo):
         colnames_str = ', '.join(self._track_info_columns)
@@ -269,10 +284,10 @@ class WeimarDB(Dataset):
         self._parse_beats(solo)
         self._parse_transcription_info(solo)
         self._parse_track_info(solo)
+        self._parse_solo_info(solo)
         solo.resample_rate = self._resample_rate
         self._load_audio(solo)
         return solo
         
-
     def __len__(self):
         return WDB_SIZE
