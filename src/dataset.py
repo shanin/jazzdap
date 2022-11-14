@@ -7,6 +7,7 @@ from math import floor
 import sqlite3
 import IPython.display as ipd
 import matplotlib.pyplot as plt
+from madmom.features.beats import RNNBeatProcessor, BeatTrackingProcessor
 
 WDB_SIZE = 456
 
@@ -46,6 +47,13 @@ class WeimarSolo(object):
         self.beats = None
         self.sample_rate = None
         self.resample_rate = None
+        self.predicted_beats = None
+
+    def __str__(self):
+        return(self.filename)
+    
+    def __repr__(self):
+        return(self.filename)
 
     def resampled_audio(self):   
         transform = Resample(
@@ -54,15 +62,13 @@ class WeimarSolo(object):
         )
         return transform(self.audio)
 
-    def play(self):
-        print(self.filename)
-        return ipd.Audio(rate = self.sample_rate, data = self.audio)
+    def mono_audio(self):
+        return self.audio.mean(axis = 0)
 
-    def __str__(self):
-        return(self.filename)
-    
-    def __repr__(self):
-        return(self.filename)
+    def predict_beats(self):
+        activations = RNNBeatProcessor()(self.mono_audio().numpy())
+        self.predicted_beats = BeatTrackingProcessor(fps=100)(activations)
+        return self.predicted_beats
 
     def export_to_sv(self):
         pd.DataFrame(
@@ -72,6 +78,10 @@ class WeimarSolo(object):
                 'pitch': self.melody.pitch
             }
         ).to_csv(self.filename + '.melody.csv', index = False)
+
+    def play(self):
+        print(self.filename)
+        return ipd.Audio(rate = self.sample_rate, data = self.audio)
 
     def pianoroll(self, predictions = None, beats = None, 
             output_file = None, title = None, scale_factor = 0.7, height = 10):
