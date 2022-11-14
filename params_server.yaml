@@ -1,0 +1,35 @@
+shared:
+  exp_folder: exp
+  raw_data: ../c4dm-datasets/WeimarJazzDatabase
+download_packages:
+  package_dir: packages
+  packages:
+    baseline_1: https://github.com/dogacbasaran/ismir2018_dominant_melody_estimation.git
+dataset:
+  audio_dir: orig
+  resample_rate: 22050
+  weimardb: data/wjazzd.db
+  full: True
+baseline:
+  repo: packages/baseline_1
+  input_data: preprocessed/wdb_wavs
+  Fs: 22050
+  hop: 256.0
+  pitch_corrected: False
+  output_folder: baseline_output
+  h5py_folder: h5py_files
+  weights_path: predict/weights_C-RNN.h5
+  melody_folder: csv_melody
+baseline_evaluation:
+  output_folder: baseline_evaluation
+  predictions_folder: baseline_output/csv_melody
+  pianoroll_folder: pianoroll
+  b1_output_file: sf_nmf_evaluation.csv
+  melodia_suffix: _vamp_mtg-melodia_melodia_melody.csv
+  melodia_folder: baseline_output/melodia
+  b2_output_file: melodia_evaluation.csv
+sfnmf:
+  Fs: 22050
+  hop: 256.0
+  save: True
+  output_folder: preprocessed/sfnmf
