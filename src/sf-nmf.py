@@ -50,7 +50,7 @@ def precompute_HF0(config):
         }
         if config['sfnmf']['save']:
             np.save(
-                os.path.join(output_path, sample.filename), 
+                os.path.join(output_path, "melid_" + str(sample.melid).zfill(3)), 
                 sfm_output['HF0']
             )
     os.remove(filename)
