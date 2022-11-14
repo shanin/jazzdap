@@ -22,7 +22,8 @@ MISTAKES = {
     "SonnyStitt_BluesInBe-Bop_Orig": "SonnyStitt_BluesInBe=Bop_Orig",
     "LesterYoung_D.B. Blues_Orig": "LesterYoung_D.B.Blues_Orig",
     "MilesDavis_Eighty-One_Orig": "MilesDavis_Eighty=One_Orig",
-    "Dave Holland_TakeTheColtrane_Orig": "DaveHolland_TakeTheColtrane_Orig"
+    "Dave Holland_TakeTheColtrane_Orig": "DaveHolland_TakeTheColtrane_Orig",
+    "ChrisPotter_InASentimentalMood_Orig": "ChrisPotter_InaSentimentalMood_Orig"
 }
 
 SOLOSTART_CORRECTIONS = {
