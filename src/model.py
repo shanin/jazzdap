@@ -23,18 +23,17 @@ class TimeDistributed(nn.Module):
 
     def forward(self, x):
 
-        print('x ', x.shape)
+        #print('x ', x.shape)
         # (samples * timesteps, input_size, channels)
         x_reshape = x.transpose(1, -1).reshape(-1, x.size(3), x.size(4), x.size(1)).transpose(2, 3).transpose(1, 2)
-        
-        print('x_reshape ', x_reshape.shape)
+        #print('x_reshape ', x_reshape.shape)
         
         y = self.module(x_reshape)
-        print('x_hat ', y.shape)
+        #print('x_hat ', y.shape)
         
         # (samples, timesteps, output_size)
         y = y.view(x.size(0), -1, *y.size()[1:]).transpose(1,2)
-        print('y ', y.shape)
+        #print('y ', y.shape)
 
         return y
 
@@ -105,4 +104,3 @@ class CRNN(nn.Module):
         x = x.reshape(samples, -1, x.size(-1))
         
         return x
-
