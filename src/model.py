@@ -41,7 +41,7 @@ class TimeDistributed(nn.Module):
 class CRNN(nn.Module):
 
     def __init__(self):
-        super(Net, self).__init__()
+        super(CRNN, self).__init__()
         
         # CNN PART
         #add correct padding mode
