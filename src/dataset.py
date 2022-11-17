@@ -38,6 +38,7 @@ SOLO_MISTAKES = {
     "BranfordMarsalis_Ummg_Solo": "BranfordMarsalis_U.M.M.G._Solo",
     "SonnyRollins_I'llRememberApril-AlternateTake2_Solo": "SonnyRollins_I'llRememberApril_AlternateTake2_Solo",
     "PaulDesmond_BlueRondoAlaTurk_Solo": "PaulDesmond_BlueRondoALaTurk_Solo"
+    "BranfordMarsalis_GutbucketSteepy_Solo": "BranfordMarsalis_GutBucketSteepy_Solo"
 }
 
 SOLO_PATCH_FILES = ['LouisArmstrong_CornetChopSuey_Solo']
