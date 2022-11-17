@@ -12,9 +12,10 @@ preprocess:
   output_file: csv_youtube_filtered.csv
   wav_dir: preprocessed/wdb_wavs
 dataset:
-  metadata_path: preprocessed
+  sfnmf_dir: preprocessed/sfnmf
   youtube_index: csv_youtube_filtered.csv
-  audio_dir: original_audio
+  audio_dir: wjd_solos
+  patch_dir: wjd_solos_patch
   melody_dir: csv_melody
   resample_rate: 22050
   weimardb: data/raw/weimar/wjazzd.db
@@ -39,3 +40,8 @@ baseline_evaluation:
   melodia_suffix: _vamp_mtg-melodia_melodia_melody.csv
   melodia_folder: baseline_output/melodia
   b2_output_file: melodia_evaluation.csv
+sfnmf:
+  Fs: 22050
+  hop: 256.0
+  save: True
+  output_folder: preprocessed/sfnmf
