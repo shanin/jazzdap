@@ -1,9 +1,11 @@
 import os
 import yaml
 import numpy as np
+import pandas as pd
 import IPython.display as ipd
 import matplotlib.pyplot as plt
 import matplotlib.lines as lines
+
 
 def load_config(filename):
     with open(filename) as f:
@@ -15,6 +17,40 @@ def load_config(filename):
 #    plt.scatter(melody['onset'], melody['pitch'], marker='.')
 
 
+def transcription2onehot(transcription):
+    cleaned_transcription = transcription - 35
+    cleaned_transcription[cleaned_transcription == -35] = 0
+    mask_1 = np.tile(cleaned_transcription, (63, 1))
+    mask_2 = np.tile(np.arange(63).reshape((63,1)), (1, cleaned_transcription.shape[0]))
+    return (mask_1 == mask_2).astype(int)
+
+
+def fill_pauses(sample):
+    onset = sample.melody.onset
+    offset = sample.melody.onset +  sample.melody.duration
+    pitch = sample.melody.pitch
+    rows = []
+    row = {
+        'pitch': 0,
+        'onset': 0,
+        'voicing': 0
+    }
+    rows.append(row)
+    for index in range(onset.shape[0]):
+        row = {
+            'pitch': weimar2hertz(pitch.iloc[index]),
+            'onset': onset.iloc[index],
+            'voicing': 1
+        }
+        rows.append(row)
+        row = {
+            'pitch': 0,
+            'onset': offset.iloc[index],
+            'voicing': 0
+        }
+        rows.append(row)
+    return pd.DataFrame(rows)
+
 def adapt_config_for_notebook(config):
     config['shared']['exp_folder'] = '../' + config['shared']['exp_folder']
     config['shared']['raw_data'] = '../' + config['shared']['raw_data']
@@ -25,7 +61,7 @@ def adapt_config_for_notebook(config):
     return config
 
 
-def comparative_pianoroll(melody, predictions, melodia, output_file = None, title = None, scale_factor = 0.7, height = 10, eval_mel = None, eval_sfnmf = None):
+def comparative_pianoroll(melody, predictions, melodia, legend = True, output_file = None, title = None, scale_factor = 0.7, height = 10, eval_mel = None, eval_sfnmf = None):
     plt.rcParams['figure.dpi'] = 200
     width = min(predictions.onset.max() * scale_factor, 400)
     fig, ax = plt.subplots(figsize=(width, height))
@@ -71,41 +107,44 @@ def comparative_pianoroll(melody, predictions, melodia, output_file = None, titl
         pitch = [row.pitch, row.pitch]
         ax.plot(time, pitch, color = 'black')
 
-    ml = ax.scatter(
-        melodia['onset'], 
-        melodia['pitch'], 
-        marker = 'o', 
-        s = 0.1, 
-        color = 'orange',
-        zorder=2,
-        alpha = 0.6
-    )
+    if melodia:
+        ml = ax.scatter(
+            melodia['onset'], 
+            melodia['pitch'], 
+            marker = 'o', 
+            s = 0.1, 
+            color = 'orange',
+            zorder=2,
+            alpha = 0.6
+        )
     
 
-    textstr = '\n'.join([
-        'MELODIA',
-        'Voicing Recall: {0:.2f}'.format(eval_mel['Voicing Recall']),
-        'Voicing False Alarm: {0:.2f}'.format(eval_mel['Voicing False Alarm']),
-        'Raw Pitch Accuracy: {0:.2f}'.format(eval_mel['Raw Pitch Accuracy']),
-        'Raw Chroma Accuracy: {0:.2f}'.format(eval_mel['Raw Chroma Accuracy']),
-        'Overall Accuracy: {0:.2f}'.format(eval_mel['Overall Accuracy']),
-        '',
-        'SF NMF RCNN',
-        'Voicing Recall: {0:.2f}'.format(eval_sfnmf['Voicing Recall']),
-        'Voicing False Alarm: {0:.2f}'.format(eval_sfnmf['Voicing False Alarm']),
-        'Raw Pitch Accuracy: {0:.2f}'.format(eval_sfnmf['Raw Pitch Accuracy']),
-        'Raw Chroma Accuracy: {0:.2f}'.format(eval_sfnmf['Raw Chroma Accuracy']),
-        'Overall Accuracy: {0:.2f}'.format(eval_sfnmf['Overall Accuracy'])
-    ])
-    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-    ax.text(0.01, 0.3, textstr, fontsize=10, transform=ax.transAxes,
-    verticalalignment='top', bbox=props)
+    if legend:
+        textstr = '\n'.join([
+            'MELODIA',
+            'Voicing Recall: {0:.2f}'.format(eval_mel['Voicing Recall']),
+            'Voicing False Alarm: {0:.2f}'.format(eval_mel['Voicing False Alarm']),
+            'Raw Pitch Accuracy: {0:.2f}'.format(eval_mel['Raw Pitch Accuracy']),
+            'Raw Chroma Accuracy: {0:.2f}'.format(eval_mel['Raw Chroma Accuracy']),
+            'Overall Accuracy: {0:.2f}'.format(eval_mel['Overall Accuracy']),
+            '',
+            'SF NMF RCNN',
+            'Voicing Recall: {0:.2f}'.format(eval_sfnmf['Voicing Recall']),
+            'Voicing False Alarm: {0:.2f}'.format(eval_sfnmf['Voicing False Alarm']),
+            'Raw Pitch Accuracy: {0:.2f}'.format(eval_sfnmf['Raw Pitch Accuracy']),
+            'Raw Chroma Accuracy: {0:.2f}'.format(eval_sfnmf['Raw Chroma Accuracy']),
+            'Overall Accuracy: {0:.2f}'.format(eval_sfnmf['Overall Accuracy'])
+        ])
+        props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+        ax.text(0.01, 0.3, textstr, fontsize=10, transform=ax.transAxes,
+            verticalalignment='top', bbox=props)
 
 
     ax.set_yticks([24, 36, 48, 60, 72, 84])
     ax.set_yticklabels(['C2', 'C3', 'C4', 'C5', 'C6', 'C7'])
 
-    plt.legend([sf, gt, ml], ['SF NMF RCNN', 'Ground Truth', 'MELODIA'], loc = 'upper left')
+    if legend:
+        plt.legend([sf, gt, ml], ['SF NMF RCNN', 'Ground Truth', 'MELODIA'], loc = 'upper left')
     plt.xlabel('seconds')
     plt.ylabel('pitch')
     plt.xlim(first_onset, last_onset)
