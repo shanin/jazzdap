@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from madmom.features.beats import RNNBeatProcessor, BeatTrackingProcessor
 from mir_eval.melody import resample_melody_series
 import warnings
-from sklearn.preprocessing import LabelBinarizer
 from utils import transcription2onehot
 
 WDB_SIZE = 456
@@ -41,7 +40,8 @@ SOLO_MISTAKES = {
     "BranfordMarsalis_GutbucketSteepy_Solo": "BranfordMarsalis_GutBucketSteepy_Solo",
     "DizzyGillespie_Blue'NBoogie_Solo": "DizzyGillespie_Blue'nBoogie_Solo",
     "EricDolphy_Aisha_solo": "EricDolphy_Aisha_Solo",
-    "KidOry_Who'sit_Solo": "KidOry_Who'sIt_Solo"
+    "KidOry_Who'sit_Solo": "KidOry_Who'sIt_Solo",
+    "WayneShorter_JuJu_Solo": "WayneShorter_Juju_Solo"
 }
 
 SOLO_PATCH_FILES = ['LouisArmstrong_CornetChopSuey_Solo']
@@ -56,33 +56,7 @@ SOLOSTART_CORRECTIONS = {
     382: 205.9
 }
 
-TRAIN_ARTISTS = [
-    'Warne Marsh', 'Benny Carter', 'Joe Lovano', 'Bix Beiderbecke',
-    'Von Freeman', 'Don Ellis', 'John Coltrane', 'Wynton Marsalis',
-    'Chet Baker', 'Clifford Brown', 'Lee Konitz', 'Charlie Shavers',
-    'Pat Martino', 'Harry Edison', 'Cannonball Adderley',
-    'Coleman Hawkins', 'George Coleman', 'Curtis Fuller',
-    'Charlie Parker', 'Lee Morgan', 'Roy Eldridge', 'Sonny Stitt',
-    'Chu Berry', 'Louis Armstrong', 'Art Pepper', 'Branford Marsalis',
-    'Pat Metheny', 'Steve Lacy', 'Nat Adderley', 'Buck Clayton',
-    'Milt Jackson', 'Red Garland', 'Zoot Sims', 'Lester Young',
-    'Dizzy Gillespie', 'John Abercrombie', 'Johnny Dodds',
-    'Ornette Coleman', 'J.J. Johnson', 'Sidney Bechet',
-    'Kenny Wheeler', 'Johnny Hodges', 'Rex Stewart',
-    'J.C. Higginbotham', 'Miles Davis', 'Chris Potter', 'Pepper Adams',
-    'Fats Navarro', 'Steve Turre', 'Gerry Mulligan', 'Michael Brecker',
-    'Herbie Hancock', 'Dickie Wells', 'Joe Henderson', 'Sonny Rollins',
-    'Woody Shaw', 'Eric Dolphy', 'Kai Winding', 'Phil Woods',
-    'Wayne Shorter', 'Kenny Garrett', 'David Murray', 'Lionel Hampton',
-    'Bob Berg'
-]
 
-TEST_OLD_ARTISTS = [
-    'Henry Allen', 'Dexter Gordon', 'Kenny Dorham', 'Benny Goodman',
-    'Paul Desmond', 'Don Byas', 'Ben Webster', 'Hank Mobley',
-    'Stan Getz', 'David Liebman', 'Steve Coleman', 'Kid Ory',
-    'Joshua Redman', 'Freddie Hubbard'
-]
 
 TEST_ARTISTS = [
     'Ben Webster', 'Cannonball Adderley', 'Charlie Shavers', 'Chu Berry', 
