@@ -14,6 +14,7 @@ from mir_eval.melody import resample_melody_series
 import warnings
 from utils import transcription2onehot
 from sklearn.preprocessing import normalize
+from tqdm import tqdm
 
 WDB_SIZE = 456
 
@@ -524,7 +525,7 @@ class WeimarSFWrapper(Dataset):
         X_list_of_tensors = []
         y_list_of_tensors = []
 
-        for sample in dataset:
+        for sample in tqdm(dataset):
             sfnmf = sample.sfnmf
             labels = sample.resampled_transcription(onehot=True)
             sfnmf, labels = self._cut(sample, sfnmf, labels)
