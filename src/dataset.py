@@ -120,6 +120,7 @@ class WeimarSolo(object):
         return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
 
     def fill_pauses(self):
+        eps = 0.0001
         onset = self.melody.onset
         offset = self.melody.onset +  self.melody.duration
         pitch = self.melody.pitch
@@ -130,7 +131,10 @@ class WeimarSolo(object):
             'voicing': 0
         }
         rows.append(row)
+        prev_offset = -1
         for index in range(onset.shape[0]):
+            if np.abs(prev_offset - onset.iloc[index]) < eps:
+                rows.pop()
             row = {
                 'pitch': pitch.iloc[index],
                 'onset': onset.iloc[index],
@@ -143,6 +147,7 @@ class WeimarSolo(object):
                 'voicing': 0
             }
             rows.append(row)
+            prev_offset = offset.iloc[index]
         return pd.DataFrame(rows)
 
     def resampled_audio(self):   
@@ -529,8 +534,6 @@ class WeimarSFWrapper(Dataset):
             X_list_of_tensors.append(HF0_tensor)
             y_list_of_tensors.append(labels_tensor)
 
-            if len(y_list_of_tensors) == 3:
-                break
 
         self.X = torch.cat(X_list_of_tensors, dim = 0)
         self.y = torch.cat(y_list_of_tensors, dim = 0)
