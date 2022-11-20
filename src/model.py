@@ -83,7 +83,7 @@ class CRNN(nn.Module):
         # RNN PART
         #add regularizer
         self.rnn = nn.GRU(61, 128, bidirectional = True)
-        self.classifier = nn.Linear(256, 62)
+        self.classifier = nn.Linear(256, 63)
 
 
     def forward(self, x):
