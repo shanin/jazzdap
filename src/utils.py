@@ -55,7 +55,6 @@ def adapt_config_for_notebook(config):
     config['shared']['exp_folder'] = '../' + config['shared']['exp_folder']
     config['shared']['raw_data'] = '../' + config['shared']['raw_data']
     config['dataset']['weimardb'] = '../' + config['dataset']['weimardb']
-    config['dataset']['subset'] = '../' + config['dataset']['subset']
     config['baseline']['repo'] = '../' + config['baseline']['repo']
     config['baseline_evaluation']['output_folder'] = '../' + config['baseline_evaluation']['output_folder']
     return config

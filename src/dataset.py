@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset
+import torch
 import torchaudio
 from torchaudio.transforms import Resample
 from math import floor
@@ -12,6 +13,7 @@ from madmom.features.beats import RNNBeatProcessor, BeatTrackingProcessor
 from mir_eval.melody import resample_melody_series
 import warnings
 from utils import transcription2onehot
+from sklearn.preprocessing import normalize
 
 WDB_SIZE = 456
 
@@ -57,6 +59,28 @@ SOLOSTART_CORRECTIONS = {
 }
 
 
+TRAIN_ARTISTS = [
+    'Art Pepper', 'Benny Carter', 'Benny Goodman', 'Bix Beiderbecke', 
+    'Bob Berg', 'Branford Marsalis', 'Buck Clayton', 'Charlie Parker', 
+    'Chet Baker', 'Clifford Brown', 'Coleman Hawkins', 'Curtis Fuller', 
+    'David Liebman', 'David Murray', 'Dickie Wells', 'Dizzy Gillespie', 
+    'Don Byas', 'Don Ellis', 'Eric Dolphy', 'Freddie Hubbard', 
+    'Gerry Mulligan', 'Hank Mobley', 'Harry Edison', 
+    'Henry Allen', 'Herbie Hancock', 'J.C. Higginbotham', 'J.J. Johnson', 
+    'Joe Lovano', 'John Abercrombie', 'Johnny Dodds', 'Johnny Hodges', 
+    'Joshua Redman', 'Kai Winding', 'Kenny Dorham', 'Kenny Garrett', 
+    'Kid Ory', 'Lee Konitz', 'Lee Morgan', 'Lester Young', 'Lionel Hampton', 
+    'Louis Armstrong', 'Michael Brecker', 'Miles Davis', 'Milt Jackson', 
+    'Ornette Coleman', 'Pat Martino', 'Pat Metheny', 
+    'Pepper Adams', 'Red Garland', 'Rex Stewart', 
+    'Roy Eldridge', 'Sonny Stitt', 'Stan Getz', 'Steve Coleman', 
+    'Steve Lacy', 'Steve Turre', 'Von Freeman', 'Warne Marsh', 
+    'Wayne Shorter', 'Woody Shaw', 'Zoot Sims'
+]
+
+VAL_ARTISTS = [
+    'Nat Adderley', 'George Coleman', 'Phil Woods'
+]
 
 TEST_ARTISTS = [
     'Ben Webster', 'Cannonball Adderley', 'Charlie Shavers', 'Chu Berry', 
@@ -199,7 +223,7 @@ class WeimarSolo(object):
                     [index - 0.5, index - 0.5], 
                     [index + 0.5, index + 0.5], 
                     color = 'whitesmoke',
-                    label='_nolegend_'
+                    label = '_nolegend_'
                 )
 
         #ground truth onset plot
@@ -225,7 +249,15 @@ class WeimarSolo(object):
             
 
 class WeimarDB(Dataset):
-    def __init__(self, config, partition = 'full', instrument = 'any', autoload_audio = True, autoload_sfnmf = False):
+    def __init__(
+            self, 
+            config, 
+            partition = 'full', 
+            instrument = 'any', 
+            performer = None,
+            autoload_audio = True, 
+            autoload_sfnmf = False
+        ):
         config_shared = config['shared']
         config_local = config['dataset']
 
@@ -250,16 +282,20 @@ class WeimarDB(Dataset):
         self.load_beats = config_local.get('load_beats', False)
         self._init_column_names()
         self._init_database_cursor(config_local)
-        self._init_melid_list(partition, instrument)
+        self._init_melid_list(partition, instrument, performer)
 
-    def _init_melid_list(self, partition, instrument):
+    def _init_melid_list(self, partition, instrument, performer):
         solo_info = self.get_solo_info()
         if partition == 'train':
             solo_info = solo_info[solo_info.performer.isin(TRAIN_ARTISTS)]
         elif partition == 'test':
             solo_info = solo_info[solo_info.performer.isin(TEST_ARTISTS)]
+        elif partition == 'val':
+            solo_info = solo_info[solo_info.performer.isin(VAL_ARTISTS)]
         if instrument in INSTRUMENTS:
             solo_info = solo_info[solo_info.instrument == instrument]
+        if performer:
+            solo_info = solo_info[solo_info.performer == performer]
         self._melid_list = solo_info.melid.values
 
 
@@ -413,3 +449,95 @@ class WeimarDB(Dataset):
         
     def __len__(self):
         return len(self._melid_list)
+
+
+
+class WeimarSFWrapper(Dataset):
+
+    def _parse_config(self, config):
+        self.segment_length = config['crnn']['segment_length']
+        self.number_of_patches = config['crnn']['number_of_patches']
+        self.patch_size = config['crnn']['patch_size']
+        self.feature_size = config['crnn']['feature_size']
+        self.number_of_classes = config['crnn']['number_of_classes']
+        self.sampling_rate = config['sfnmf']['Fs']
+        self.hop = config['sfnmf']['hop']
+
+
+    def _cut(self, sample, sfnmf, labels):
+        first_onset = sample.melody.onset.iloc[0]
+        last_offset = sample.melody.onset.iloc[-1] + sample.melody.duration.iloc[-1]
+        start = floor(first_onset * (self.sampling_rate / self.hop))
+        stop = floor(last_offset * (self.sampling_rate / self.hop)) + 1
+        return sfnmf[:, start:stop], labels[:, start:stop]
+    
+
+    def _prepare_HF0_tensor(self, sfnmf):
+        length_of_sequence = sfnmf.shape[1]
+        number_of_segments = int(floor(length_of_sequence/self.segment_length))
+
+        HF0 = np.append(
+            sfnmf[:, :number_of_segments * self.segment_length],
+            sfnmf[:, -self.segment_length:], 
+                axis=1
+        )
+        HF0 = normalize(HF0, norm='l1', axis=0)
+        HF0 = HF0.T
+
+        number_of_samples = int(HF0.shape[0] / (self.number_of_patches * self.patch_size))
+        HF0 = np.reshape(
+            HF0, 
+            (number_of_samples, self.number_of_patches, self.patch_size, self.feature_size)
+        )
+        HF0 = HF0[:, np.newaxis, :, :, :]
+        return torch.tensor(HF0, dtype=torch.float)
+
+
+    def _prepare_labels_tensor(self, labels):
+        length_of_sequence = labels.shape[1]
+        number_of_segments = int(floor(length_of_sequence/self.segment_length))
+
+        y = np.append(
+            labels[:, :(number_of_segments * self.segment_length)],
+            labels[:, -self.segment_length: ], 
+            axis=1
+        )
+        y = y.T
+
+        number_of_samples = int(y.shape[0] / (self.number_of_patches * self.patch_size))
+        y = np.reshape(
+            y,
+            (number_of_samples, self.number_of_patches, self.patch_size, self.number_of_classes)
+        )
+        return torch.tensor(y, dtype=torch.float)
+
+
+    def __init__(self, dataset, config):
+
+        self._parse_config(config)
+
+        X_list_of_tensors = []
+        y_list_of_tensors = []
+
+        for sample in dataset:
+            sfnmf = sample.sfnmf
+            labels = sample.resampled_transcription(onehot=True)
+            sfnmf, labels = self._cut(sample, sfnmf, labels)
+            
+            HF0_tensor = self._prepare_HF0_tensor(sfnmf)
+            labels_tensor = self._prepare_labels_tensor(labels)
+            X_list_of_tensors.append(HF0_tensor)
+            y_list_of_tensors.append(labels_tensor)
+
+            if len(y_list_of_tensors) == 3:
+                break
+
+        self.X = torch.cat(X_list_of_tensors, dim = 0)
+        self.y = torch.cat(y_list_of_tensors, dim = 0)
+    
+
+    def __getitem__(self, index):
+        return self.X[index, :, :, :, :], self.y[index, :, :, :]
+
+    def __len__(self):
+        return self.X.size(0)
