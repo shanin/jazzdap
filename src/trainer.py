@@ -43,12 +43,6 @@ class CRNNtrainer:
             self.optimizer.step()
 
             mlflow.log_metric('train_loss', loss.item(), self.step_counter)
-
-            if self.step_counter % self.validation_period == 0:
-                del x, y
-                self.calculate_validation_loss()
-                self.model.train()
-                
             self.step_counter += 1    
     
     def calculate_validation_loss(self):
@@ -66,6 +60,7 @@ class CRNNtrainer:
         self.step_counter = 0
         for epoch_num in tqdm(range(self.epochs_num)):
             self.train_epoch()
+            self.calculate_validation_loss()
 
     #def evaluate(self):
     #    with self.model.eval():
