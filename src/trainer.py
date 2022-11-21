@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-import pandas as pd
 import mlflow
 from tqdm import tqdm
 
@@ -30,37 +29,37 @@ class CRNNtrainer:
         self.validation_period = config['crnn_trainer']['validation_period']
 
     def train_epoch(self):
-        with self.model.train():
-            for x, y in self.dataloader['train']:
-                x = x.to(self.device)
-                y = y.to(self.device)
+        self.model.train()
+        for x, y in self.dataloader['train']:
+            x = x.to(self.device)
+            y = y.to(self.device)
 
-                pred = self.model(x)
-                self.optimizer.zero_grad()
-                loss = self.criterion(pred, y)
+            pred = self.model(x)
+            self.optimizer.zero_grad()
+            loss = self.criterion(pred, y)
 
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
-                self.optimizer.step()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
+            self.optimizer.step()
 
-                mlflow.log_metric('train_loss', loss.item(), self.step_counter)
+            mlflow.log_metric('train_loss', loss.item(), self.step_counter)
 
-                if self.step_counter % self.validation_period == 0:
-                    self.calculate_validation_loss()
-                    self.model.train()
+            if self.step_counter % self.validation_period == 0:
+                self.calculate_validation_loss()
+                self.model.train()
                 
-                self.step_counter += 1    
+            self.step_counter += 1    
     
     def calculate_validation_loss(self):
-        with self.model.eval():
-            loss_batches = []
-            for x, y in self.dataloader['val']:
-                x = x.to(self.device)
-                y = y.to(self.device)
-                pred = self.model(x)
-                loss = self.criterion(pred, y)
-                loss_batches.append(loss.item())
-            mlflow.log_metric('val_loss', np.mean(loss_batches))
+        self.model.eval()
+        loss_batches = []
+        for x, y in self.dataloader['val']:
+            x = x.to(self.device)
+            y = y.to(self.device)
+            pred = self.model(x)
+            loss = self.criterion(pred, y)
+            loss_batches.append(loss.item())
+        mlflow.log_metric('val_loss', np.mean(loss_batches))
             
     def train(self):
         self.step_counter = 0
