@@ -63,3 +63,4 @@ class CRNNtrainer:
         for epoch_num in tqdm(range(self.epochs_num)):
             self.train_epoch()
             self.calculate_validation_loss()
+            self.scheduler.step()
