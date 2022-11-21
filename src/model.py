@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
-import numpy as np
 import torch.nn.functional as F
-from sklearn.preprocessing import normalize
 
 batch_size = 16
 number_of_patches = 20
@@ -22,18 +20,13 @@ class TimeDistributed(nn.Module):
         self.module = module
 
     def forward(self, x):
-
-        #print('x ', x.shape)
-        # (samples * timesteps, input_size, channels)
-        x_reshape = x.transpose(1, -1).reshape(-1, x.size(3), x.size(4), x.size(1)).transpose(2, 3).transpose(1, 2)
-        #print('x_reshape ', x_reshape.shape)
-        
-        y = self.module(x_reshape)
-        #print('x_hat ', y.shape)
-        
-        # (samples, timesteps, output_size)
-        y = y.view(x.size(0), -1, *y.size()[1:]).transpose(1,2)
-        #print('y ', y.shape)
+        n = x.size(0)
+        # NCTWH -> NTCWH -> (NT)CWH
+        x = x.transpose(1,2)
+        x = x.reshape(-1, *x.shape[2:])
+        y = self.module(x)
+        #(NT)CWH -> NTCWH -> NCTWH
+        y = y.reshape(n, -1, *y.shape[1:]).transpose(1,2)
 
         return y
 
@@ -41,10 +34,6 @@ class CRNN(nn.Module):
 
     def __init__(self):
         super(CRNN, self).__init__()
-        
-        # CNN PART
-        #add correct padding mode
-        #add kernel regularizer
         self.td1 = TimeDistributed(
             nn.Conv2d(
                 1, 64, kernel_size = (1, 5), stride = (1, 5), 
@@ -81,14 +70,12 @@ class CRNN(nn.Module):
         )
         
         # RNN PART
-        #add regularizer
         self.rnn = nn.GRU(61, 128, bidirectional = True)
         self.classifier = nn.Linear(256, 63)
 
 
-    def forward(self, x):
-        
-        samples = x.size(0)
+    def forward(self, x, debug = False):
+
         x = F.relu(self.td1(x))
         x = self.bn1(x)
         x = F.relu(self.td2(x))
@@ -98,9 +85,10 @@ class CRNN(nn.Module):
         x = F.relu(self.td4(x))
         x = self.bn4(x)
         x = F.relu(self.td5(x))
+
+        #N1TWH -> N(TW)H
         x = x.reshape(x.size(0), -1, x.size(4))
         x = self.rnn(x)[0]
-        x = self.classifier(x.view(-1, x.size(-1)))
-        x = x.reshape(samples, -1, x.size(-1))
-        
+        x = self.classifier(x)
+        x = x.reshape(x.size(0), 20, 25, 63)
         return x

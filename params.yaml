@@ -50,3 +50,11 @@ crnn:
   step_notes: 5
   RNN: GRU
   number_of_channels: 1
+crnn_trainer:
+  device: 3
+  epochs_num: 200
+  validation_period: 10
+  batch_size: 64
+  lr: 0.0001
+  weight_decay: 0.0001
+  
