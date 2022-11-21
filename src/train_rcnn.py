@@ -71,7 +71,7 @@ def setup_trainer(config):
     trainer = CRNNtrainer(
         device = device,
         model=model,
-        optimitzer=optimizer,
+        optimizer=optimizer,
         criterion=criterion,
         dataloader_dict=dataloader_dict,
         scheduler=scheduler,
