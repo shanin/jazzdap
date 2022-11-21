@@ -48,23 +48,18 @@ class CRNNtrainer:
     def calculate_validation_loss(self):
         self.model.eval()
         loss_batches = []
-        for x, y in self.dataloader['val']:
-            x = x.to(self.device)
-            y = y.to(self.device)
-            pred = self.model(x)
-            loss = self.criterion(pred, y)
-            loss_batches.append(loss.item())
+        with torch.no_grad():
+            for x, y in self.dataloader['val']:
+                x = x.to(self.device)
+                y = y.to(self.device)
+                pred = self.model(x)
+                loss = self.criterion(pred, y)
+                loss_batches.append(loss.item())
         mlflow.log_metric('val_loss', np.mean(loss_batches))
+        self.model.train()
             
     def train(self):
         self.step_counter = 0
         for epoch_num in tqdm(range(self.epochs_num)):
             self.train_epoch()
             self.calculate_validation_loss()
-
-    #def evaluate(self):
-    #    with self.model.eval():
-    #        for x, y in self.dataloader['val']:
-    #            x = x.to(self.device)
-    #            y = y.to(self.device)
-    #            pred = self.model(x)
