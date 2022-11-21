@@ -92,3 +92,5 @@ if __name__ == '__main__':
     
     trainer = setup_trainer(config)
     trainer.train()
+
+    mlflow.end_run()

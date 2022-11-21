@@ -45,6 +45,7 @@ class CRNNtrainer:
             mlflow.log_metric('train_loss', loss.item(), self.step_counter)
 
             if self.step_counter % self.validation_period == 0:
+                del x, y
                 self.calculate_validation_loss()
                 self.model.train()
                 
