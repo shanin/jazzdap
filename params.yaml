@@ -41,7 +41,6 @@ sfnmf:
   save: True
   output_folder: preprocessed/sfnmf
 crnn:
-  batch_size: 16
   number_of_patches: 20
   patch_size: 25
   segment_length: 500
@@ -55,6 +54,7 @@ crnn_trainer:
   epochs_num: 200
   validation_period: 10
   batch_size: 64
-  lr: 0.0001
+  lr: 0.001
+  lr_final: 0.00001
   weight_decay: 0.0001
-  
+  label_smoothing: 0.25
