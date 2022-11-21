@@ -72,7 +72,6 @@ def setup_trainer(config):
         device = device,
         model=model,
         optimitzer=optimizer,
-        scheduler=scheduler,
         criterion=criterion,
         dataloader_dict=dataloader_dict,
         scheduler=scheduler,
