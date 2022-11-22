@@ -270,7 +270,14 @@ def play_audio(sample):
     return ipd.Audio(rate = sample['sample_rate'], data = sample['audio'])
 
 def weimar2hertz(n):
-    return 440 * (2 ** ((n - 69) / 12))
+    if isinstance(n, int):
+        if n == 0:
+            return 0
+        else:
+            return 440 * (2 ** ((n - 69) / 12))
+    res = 440 * (2 ** ((n - 69) / 12))
+    res[n == 0] = 0
+    return res
 
 def hertz2weimar(f, to_int = True):
     value = 12 * np.log2(f/440) + 69

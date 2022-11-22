@@ -1,11 +1,13 @@
 import torch
 import numpy as np
+import pandas as pd
 import mlflow
 from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 
 import mir_eval
+from utils import weimar2hertz
 
 
 class CRNNtrainer:
@@ -37,7 +39,7 @@ class CRNNtrainer:
         self.model.train()
 
         train_dataloader = DataLoader(
-            self.dataset['train'],
+            self.dataset['train-collated'],
             self.batch_size,
             shuffle = True
         )
@@ -62,7 +64,7 @@ class CRNNtrainer:
         loss_batches = []
 
         val_dataloader = DataLoader(
-            self.dataset['val'],
+            self.dataset['val-collated'],
             self.batch_size,
             shuffle = False
         )
@@ -82,6 +84,8 @@ class CRNNtrainer:
         for epoch_num in tqdm(range(self.epochs_num)):
             self.train_epoch()
             self.calculate_validation_loss()
+            self.evaluate('val-separated')
+            self.evaluate('test-separated')
             self.scheduler.step()
     
     #probably should be in weimar solo class
@@ -107,32 +111,43 @@ class CRNNtrainer:
 
         return self.unfold_predictions(torch.cat(pred_batches, dim = 0), length)
 
-"""
-    def evaluate(self):
-        for x, y, length in self.dataset['test']:
-            pred = np.argmax(self.predict(x, length).detach().numpy())
-            y = np.argmax(y.detach().numpy())
 
-            
+    def evaluate(self, part):
+        rows = []
+        for x, y, z in self.dataset[part]:
+            pitch_estimates = np.argmax(self.predict(x, z).detach().numpy(), axis = 1) + 35
+            labels = np.argmax(self.unfold_predictions(y, z).detach().numpy(), axis = 1) + 35
+
+            #some more technical debt
+            pitch_estimates[pitch_estimates == 35] = 0
+            labels[labels == 35] = 0
+    
             evaluation_results = {}
 
             (ref_v, ref_c, est_v, est_c) = mir_eval.melody.to_cent_voicing(np.arange(np.size(labels)),
-                                                                        labels,
-                                                                        np.arange(np.size(labels)),
-                                                                        pitch_estimates)
+                                                                            weimar2hertz(labels),
+                                                                            np.arange(np.size(labels)),
+                                                                            weimar2hertz(pitch_estimates))
 
             vr, vfa = mir_eval.melody.voicing_measures(ref_v, est_v)
             rpa = mir_eval.melody.raw_pitch_accuracy(ref_v, ref_c, est_v, est_c, cent_tolerance=80)
             rca = mir_eval.melody.raw_chroma_accuracy(ref_v, ref_c, est_v, est_c, cent_tolerance=80)
             oa = mir_eval.melody.overall_accuracy(ref_v, ref_c, est_v, est_c, cent_tolerance=80)
 
-            evaluation_results['query'] = sample['query']
             evaluation_results['Voicing Recall'] = vr
             evaluation_results['Voicing False Alarm'] = vfa
             evaluation_results['Raw Pitch Accuracy'] = rpa
             evaluation_results['Raw Chroma Accuracy'] = rca
             evaluation_results['Overall Accuracy'] = oa
-"""
+    
+            rows.append(evaluation_results)
+        evaluation_results = pd.DataFrame(rows)
+        mlflow.log_metric(f'OA_{part}', evaluation_results['Overall Accuracy'].mean())
+        mlflow.log_metric(f'VR_{part}', evaluation_results['Voicing Recall'].mean())
+        mlflow.log_metric(f'VFA_{part}', evaluation_results['Voicing False Alarm'].mean())
+        mlflow.log_metric(f'RPA_{part}', evaluation_results['Raw Pitch Accuracy'].mean())
+        mlflow.log_metric(f'RCA_{part}', evaluation_results['Raw Chroma Accuracy'].mean())
+
 
             
 

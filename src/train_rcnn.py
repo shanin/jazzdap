@@ -12,9 +12,9 @@ from trainer import CRNNtrainer
 import mlflow
 
 
-def prepare_dataset(config, partition):
+def prepare_dataset(config, partition, wrapper_type):
     
-    if partition == 'test':
+    if wrapper_type == 'separate':
         wrapper = WeimarSeparate
     else:
         wrapper = WeimarCollated
@@ -30,11 +30,11 @@ def prepare_dataset(config, partition):
     
     return dataset
 
-def setup_dataset_dict(config, partitions):
+def setup_dataset_dict(config, parts, types):
     dataset_dict = {}
-    for part in partitions:
-        print(f'loading partition: {part}')
-        dataset_dict[part] = prepare_dataset(config, part)
+    for part, type in zip(parts, types):
+        print(f'loading partition: {part}/{type}')
+        dataset_dict[part] = prepare_dataset(config, part, type)
     return dataset_dict
 
 def setup_device(config):
@@ -60,7 +60,11 @@ def setup_criterion(config):
 def setup_trainer(config):
     model = CRNN()
     parameters = model.parameters()
-    dataset_dict = setup_dataset_dict(config, ['train', 'test', 'val'])
+    dataset_dict = setup_dataset_dict(
+        config, 
+        ['train', 'test', 'val', 'val'],
+        ['collated', 'separated', 'collated', 'separated']
+    )
     device = setup_device(config)
     criterion = setup_criterion(config)
     optimizer = setup_optimizer(config, parameters)
