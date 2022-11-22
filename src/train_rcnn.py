@@ -5,18 +5,21 @@ import torch
 from torch.utils.data import DataLoader
 
 from utils import load_config
-from dataset import WeimarDB, WeimarSFWrapper
+from dataset import WeimarDB, WeimarCollated, WeimarSeparate
 from model import CRNN
 from trainer import CRNNtrainer
 
 import mlflow
 
 
-def prepare_dataloader(config, partition):
+def prepare_dataset(config, partition):
     
-    batch_size = config['crnn_trainer']['batch_size']
-    
-    data = WeimarSFWrapper(
+    if partition == 'test':
+        wrapper = WeimarSeparate
+    else:
+        wrapper = WeimarCollated
+
+    dataset = wrapper(
         WeimarDB(
             config,
             partition = partition,
@@ -25,19 +28,14 @@ def prepare_dataloader(config, partition):
         ), config
     )
     
-    dataloader = DataLoader(
-        data, 
-        batch_size=batch_size, 
-        shuffle=True
-    )
-    
-    return dataloader
+    return dataset
 
-def setup_dataloader_dict(config, partitions):
-    dataloader_dict = {}
+def setup_dataset_dict(config, partitions):
+    dataset_dict = {}
     for part in partitions:
-        dataloader_dict[part] = prepare_dataloader(config, part)
-    return dataloader_dict
+        print(f'loading partition: {part}\n')
+        dataset_dict[part] = prepare_dataset(config, part)
+    return dataset_dict
 
 def setup_device(config):
     index = config['crnn_trainer']['device']
@@ -62,7 +60,7 @@ def setup_criterion(config):
 def setup_trainer(config):
     model = CRNN()
     parameters = model.parameters()
-    dataloader_dict = setup_dataloader_dict(config, ['train', 'val'])
+    dataset_dict = setup_dataset_dict(config, ['train', 'test', 'val'])
     device = setup_device(config)
     criterion = setup_criterion(config)
     optimizer = setup_optimizer(config, parameters)
@@ -73,7 +71,7 @@ def setup_trainer(config):
         model=model,
         optimizer=optimizer,
         criterion=criterion,
-        dataloader_dict=dataloader_dict,
+        dataset_dict=dataset_dict,
         scheduler=scheduler,
         config=config
     )
