@@ -493,9 +493,9 @@ class WeimarSlicer(Dataset):
         number_of_samples = int(HF0.shape[0] / (self.number_of_patches * self.patch_size))
         HF0 = np.reshape(
             HF0, 
-            (1, number_of_samples, 1, self.number_of_patches, self.patch_size, self.feature_size)
+            (number_of_samples, 1, self.number_of_patches, self.patch_size, self.feature_size)
         )
-        return torch.tensor(HF0, dtype=torch.float)
+        return torch.tensor(HF0, dtype=torch.float), length_of_sequence, number_of_samples
 
 
     def _prepare_labels_tensor(self, labels):
@@ -512,9 +512,9 @@ class WeimarSlicer(Dataset):
         number_of_samples = int(y.shape[0] / (self.number_of_patches * self.patch_size))
         y = np.reshape(
             y,
-            (1, number_of_samples, self.number_of_patches, self.patch_size, self.number_of_classes)
+            (number_of_samples, self.number_of_patches, self.patch_size, self.number_of_classes)
         )
-        return torch.tensor(y, dtype=torch.float)
+        return torch.tensor(y, dtype=torch.float), length_of_sequence, number_of_samples
 
 
     def __init__(self, dataset, config):
@@ -523,20 +523,26 @@ class WeimarSlicer(Dataset):
 
         X_list_of_tensors = []
         y_list_of_tensors = []
+        track_lengths = []
+        number_of_samples = []
 
         for sample in tqdm(dataset):
             sfnmf = sample.sfnmf
             labels = sample.resampled_transcription(onehot=True)
             sfnmf, labels = self._cut(sample, sfnmf, labels)
             
-            HF0_tensor = self._prepare_HF0_tensor(sfnmf)
-            labels_tensor = self._prepare_labels_tensor(labels)
+            HF0_tensor, hf0_len, samples = self._prepare_HF0_tensor(sfnmf)
+            labels_tensor, _, _ = self._prepare_labels_tensor(labels)
+
             X_list_of_tensors.append(HF0_tensor)
             y_list_of_tensors.append(labels_tensor)
-
+            track_lengths.append(hf0_len)
+            number_of_samples.append(samples)
 
         self.X = torch.cat(X_list_of_tensors, dim = 0)
         self.y = torch.cat(y_list_of_tensors, dim = 0)
+        self.track_lengths = track_lengths
+        self.number_of_samples = number_of_samples
     
     def __getitem__(self, index):
         raise NotImplemented
@@ -547,15 +553,22 @@ class WeimarSlicer(Dataset):
 class WeimarCollated(WeimarSlicer):
 
     def __getitem__(self, index):
-        return self.X.view(-1, * self.X.shape[2:])[index] , self.y.view(-1, * self.y.shape[2:])[index]
-
-    def __len__(self):
-        return self.X.view(-1, * self.X.shape[2:]).size(0)
-
-class WeimarSeparate(WeimarSlicer):
-
-    def __getitem__(self, index):
         return self.X[index] , self.y[index]
 
     def __len__(self):
         return self.X.size(0)
+
+class WeimarSeparate(WeimarSlicer):
+
+    def __getitem__(self, index):
+        start_sample = np.cumsum([0] + self.number_of_samples)
+        stop_sample = np.cumsum(self.number_of_samples)
+        return (
+            self.X[start_sample[index]:stop_sample[index]], 
+            self.y[start_sample[index]:stop_sample[index]], 
+            self.track_lengths[index]
+        )
+        
+
+    def __len__(self):
+        return len(self.track_lengths)
