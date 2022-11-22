@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import mlflow
 from tqdm import tqdm
+import os
 
 from torch.utils.data import DataLoader
 
@@ -29,11 +30,17 @@ class CRNNtrainer:
         self.scheduler = scheduler
         self._parse_config(config)
         self.step_counter = 0
+        self.current_val_oa = 0
     
     def _parse_config(self, config):
         self.epochs_num = config['crnn_trainer']['epochs_num']
         self.validation_period = config['crnn_trainer']['validation_period']
         self.batch_size = config['crnn_trainer']['batch_size']
+        self.output_folder = os.path.join(
+            config['shared']['exp_folder'],
+            config['crnn_trainer']['model_folder']
+        )
+
 
     def train_epoch(self):
         self.model.train()
@@ -80,13 +87,17 @@ class CRNNtrainer:
         self.model.train()
             
     def train(self):
-        self.step_counter = 0
         for epoch_num in tqdm(range(self.epochs_num)):
+            mlflow.log_metric("lr", self.optimizer.param_groups[0]["lr"], step=epoch_num)
             self.train_epoch()
             self.calculate_validation_loss()
-            self.evaluate('val-separated')
+            val_oa = self.evaluate('val-separated')
             self.evaluate('test-separated')
             self.scheduler.step()
+            if val_oa > self.current_val_oa:
+                self.current_val_oa = val_oa
+                self.save_model()
+
     
     #probably should be in weimar solo class
     def unfold_predictions(self, pred, track_length):
@@ -147,6 +158,16 @@ class CRNNtrainer:
         mlflow.log_metric(f'VFA_{part}', evaluation_results['Voicing False Alarm'].mean())
         mlflow.log_metric(f'RPA_{part}', evaluation_results['Raw Pitch Accuracy'].mean())
         mlflow.log_metric(f'RCA_{part}', evaluation_results['Raw Chroma Accuracy'].mean())
+        return evaluation_results['Overall Accuracy'].mean()
+
+    def save_model(self):
+        os.makedirs(self.output_folder, exist_ok=True)
+        filename_save_model_st = os.path.join(self.output_folder, f"model_OAval_{self.current_val_oa}.st")
+        model = self.model
+        model = model.to("cpu")
+        torch.save(model.state_dict(), filename_save_model_st)
+        mlflow.log_artifact(filename_save_model_st)
+        model = model.to(self.device)
 
 
             
