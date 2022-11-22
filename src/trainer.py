@@ -90,7 +90,7 @@ class CRNNtrainer:
             unfolded = pred[:-1].reshape(-1, pred.size(-1))
             unfolded_tail = pred[-1].reshape(-1, pred.size(-1))
             tail_len = track_length - unfolded.size(0)
-            return torch.cat(unfolded, unfolded_tail[-tail_len:], dim = 0)
+            return torch.cat([unfolded, unfolded_tail[-tail_len:]], dim = 0)
         else:
             return pred.reshape(-1, pred.size(-1))
 
