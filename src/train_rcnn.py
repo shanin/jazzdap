@@ -33,7 +33,7 @@ def prepare_dataset(config, partition, wrapper_type):
 def setup_dataset_dict(config, parts, types):
     dataset_dict = {}
     for part, type in zip(parts, types):
-        print(f'loading partition: {part}/{type}')
+        print(f'loading partition: {part}-{type}')
         dataset_dict[f'{part}-{type}'] = prepare_dataset(config, part, type)
     return dataset_dict
 
