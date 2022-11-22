@@ -458,7 +458,7 @@ class WeimarDB(Dataset):
 
 
 
-class WeimarSFWrapper(Dataset):
+class WeimarSlicer(Dataset):
 
     def _parse_config(self, config):
         self.segment_length = config['crnn']['segment_length']
@@ -493,9 +493,8 @@ class WeimarSFWrapper(Dataset):
         number_of_samples = int(HF0.shape[0] / (self.number_of_patches * self.patch_size))
         HF0 = np.reshape(
             HF0, 
-            (number_of_samples, self.number_of_patches, self.patch_size, self.feature_size)
+            (1, number_of_samples, 1, self.number_of_patches, self.patch_size, self.feature_size)
         )
-        HF0 = HF0[:, np.newaxis, :, :, :]
         return torch.tensor(HF0, dtype=torch.float)
 
 
@@ -513,7 +512,7 @@ class WeimarSFWrapper(Dataset):
         number_of_samples = int(y.shape[0] / (self.number_of_patches * self.patch_size))
         y = np.reshape(
             y,
-            (number_of_samples, self.number_of_patches, self.patch_size, self.number_of_classes)
+            (1, number_of_samples, self.number_of_patches, self.patch_size, self.number_of_classes)
         )
         return torch.tensor(y, dtype=torch.float)
 
@@ -539,9 +538,24 @@ class WeimarSFWrapper(Dataset):
         self.X = torch.cat(X_list_of_tensors, dim = 0)
         self.y = torch.cat(y_list_of_tensors, dim = 0)
     
+    def __getitem__(self, index):
+        raise NotImplemented
+
+    def __len__(self):
+        raise NotImplemented
+
+class WeimarCollated(WeimarSlicer):
 
     def __getitem__(self, index):
-        return self.X[index, :, :, :, :], self.y[index, :, :, :]
+        return self.X.view(-1, * self.X.shape[2:])[index] , self.y.view(-1, * self.y.shape[2:])[index]
+
+    def __len__(self):
+        return self.X.view(-1, * self.X.shape[2:]).size(0)
+
+class WeimarSeparate(WeimarSlicer):
+
+    def __getitem__(self, index):
+        return self.X[index] , self.y[index]
 
     def __len__(self):
         return self.X.size(0)
