@@ -33,7 +33,7 @@ def prepare_dataset(config, partition):
 def setup_dataset_dict(config, partitions):
     dataset_dict = {}
     for part in partitions:
-        print(f'loading partition: {part}\n')
+        print(f'loading partition: {part}')
         dataset_dict[part] = prepare_dataset(config, part)
     return dataset_dict
 

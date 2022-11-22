@@ -89,12 +89,12 @@ class CRNNtrainer:
         if track_length % (pred.size(-2) * pred.size(-3)) != 0:
             unfolded = pred[:-1].reshape(-1, pred.size(-1))
             unfolded_tail = pred[-1].reshape(-1, pred.size(-1))
-            tail_len = track_length - unfolded.size[0]
-            return torch.cat(unfolded, unfolded_tail[-tail_len:])
+            tail_len = track_length - unfolded.size(0)
+            return torch.cat(unfolded, unfolded_tail[-tail_len:], dim = 0)
         else:
             return pred.reshape(-1, pred.size(-1))
 
-    def predict(self, X):
+    def predict(self, X, length):
         self.model.eval()
         test_dataloader = DataLoader(X, self.batch_size, shuffle = False)
         pred_batches = []
@@ -105,12 +105,12 @@ class CRNNtrainer:
                 pred = self.model(batch)
                 pred_batches.append(pred.to('cpu'))
 
-        return self.unfold_predictions(torch.cat(pred_batches, dim = 0))
+        return self.unfold_predictions(torch.cat(pred_batches, dim = 0), length)
 
 """
     def evaluate(self):
-        for x, y in self.dataset['test']:
-            pred = np.argmax(self.predict(x).detach().numpy())
+        for x, y, length in self.dataset['test']:
+            pred = np.argmax(self.predict(x, length).detach().numpy())
             y = np.argmax(y.detach().numpy())
 
             
