@@ -71,7 +71,7 @@ class CRNN(nn.Module):
         )
         
         # RNN PART
-        self.rnn = nn.GRU(61, 128, bidirectional = True)
+        self.rnn = nn.GRU(61, 128, bidirectional = True, batch_first=True)
         self.classifier = nn.Linear(256, 63)
 
 

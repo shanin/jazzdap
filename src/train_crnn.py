@@ -92,7 +92,7 @@ if __name__ == '__main__':
     
     mlflow.start_run()
     
-    trainer = setup_trainer(config, CNN_base())
+    trainer = setup_trainer(config, CRNN())
     trainer.train()
 
     mlflow.end_run()
