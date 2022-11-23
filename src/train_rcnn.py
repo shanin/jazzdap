@@ -25,7 +25,8 @@ def prepare_dataset(config, partition, wrapper_type):
             partition = partition,
             autoload_sfnmf=True, 
             autoload_audio=False
-        ), config
+        ), config,
+        tag = f'{partition}'
     )
     
     return dataset
@@ -56,6 +57,7 @@ def setup_scheduler(config, optimizer):
 def setup_criterion(config):
     label_smoothing = config['crnn_trainer'].get('label_smoothing', 0)
     return torch.nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+
 
 def setup_trainer(config):
     model = CRNN()

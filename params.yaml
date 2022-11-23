@@ -17,6 +17,7 @@ dataset:
   patch_dir: wjd_solos_patch
   weimardb: data/raw/weimar/wjazzd.db
   resample_rate: 22050
+  cache_folder: data_cache
 baseline:
   repo: packages/baseline_1
   input_data: preprocessed/wdb_wavs
@@ -59,4 +60,4 @@ crnn_trainer:
   weight_decay: 0.0001
   label_smoothing: 0.25
   model_folder: models
-  
+

@@ -516,17 +516,14 @@ class WeimarSlicer(Dataset):
         )
         return torch.tensor(y, dtype=torch.float), length_of_sequence, number_of_samples
 
-
-    def __init__(self, dataset, config):
-
-        self._parse_config(config)
-
+    def _assemble_tensors(self):
+        
         X_list_of_tensors = []
         y_list_of_tensors = []
         track_lengths = []
         number_of_samples = []
 
-        for sample in tqdm(dataset):
+        for sample in tqdm(self.dataset):
             sfnmf = sample.sfnmf
             labels = sample.resampled_transcription(onehot=True)
             sfnmf, labels = self._cut(sample, sfnmf, labels)
@@ -543,6 +540,38 @@ class WeimarSlicer(Dataset):
         self.y = torch.cat(y_list_of_tensors, dim = 0)
         self.track_lengths = track_lengths
         self.number_of_samples = number_of_samples
+
+
+    def __init__(self, dataset, config, tag = None):
+
+        self._parse_config(config)
+        self.tag = tag
+        self.dataset = dataset
+
+        if self.tag is None:
+            self._assemble_tensors()
+        else:
+            self.cache_folder = os.path.join(
+                config['shared']['exp_folder'],
+                config['dataset']['cache_folder'],
+                self.tag
+            )
+            if os.path.exists(self.cache_folder):
+                self.X = torch.load(os.path.join(self.cache_folder, 'X.pt'))
+                self.y = torch.load(os.path.join(self.cache_folder, 'y.pt'))
+                self.track_lengths = \
+                    torch.load(os.path.join(self.cache_folder, 'track_lengths.pt'))
+                self.number_of_samples = \
+                    torch.load(os.path.join(self.cache_folder, 'number_of_samples.pt'))
+            else:
+                self._assemble_tensors()
+                os.makedirs(self.cache_folder, exist_ok = True)
+                torch.save(self.X, os.path.join(self.cache_folder, 'X.pt'))
+                torch.save(self.y, os.path.join(self.cache_folder, 'y.pt'))
+                torch.save(self.track_length, os.path.join(self.cache_folder, 'track_length.pt'))
+                torch.save(self.number_of_samples, os.path.join(self.cache_folder, 'number_of_samples.pt'))
+
+
     
     def __getitem__(self, index):
         raise NotImplemented
