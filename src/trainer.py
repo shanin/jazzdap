@@ -55,8 +55,9 @@ class CRNNtrainer:
             x = x.to(self.device)
             y = y.to(self.device)
 
-            pred = self.model(x)
             self.optimizer.zero_grad()
+
+            pred = self.model(x)
             loss = self.criterion(pred.reshape(-1, 63), y.reshape(-1, 63)) #fix later
 
             loss.backward()
