@@ -35,40 +35,35 @@ class CRNN(nn.Module):
 
     def __init__(self):
         super(CRNN, self).__init__()
-        self.td1 = TimeDistributed(
-            nn.Conv2d(
+        self.conv1 = nn.Conv2d(
                 1, 64, kernel_size = (1, 5), stride = (1, 5), 
                 padding = (0,2), dtype=torch.float
             )
-        )
-        self.bn1 = nn.BatchNorm3d(64)
-        self.td2 = TimeDistributed(
-            nn.Conv2d(
+        
+        self.bn1 = nn.BatchNorm2d(64)
+        self.conv2 = nn.Conv2d(
                 64, 64, kernel_size = (3, 5), 
                 padding = (1,2), dtype=torch.float
             )
-        )
-        self.bn2 = nn.BatchNorm3d(64)
-        self.td3 = TimeDistributed(
-            nn.Conv2d(
+        
+        self.bn2 = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d(
                 64, 64, kernel_size = (3, 3), 
                 padding = (1,1), dtype=torch.float
             )
-        )
-        self.bn3 = nn.BatchNorm3d(64)
-        self.td4 = TimeDistributed(
-            nn.Conv2d(
+        
+        self.bn3 = nn.BatchNorm2d(64)
+        self.conv4 = nn.Conv2d(
                 64, 16, kernel_size = (3, 15), 
                 padding = (1,7), dtype=torch.float
             )
-        )
-        self.bn4 = nn.BatchNorm3d(16)
-        self.td5 = TimeDistributed(
-            nn.Conv2d(
+        
+        self.bn4 = nn.BatchNorm2d(16)
+        self.conv5 = nn.Conv2d(
                 16, 1, kernel_size = (1, 1), 
                 dtype=torch.float
             )
-        )
+        
         
         # RNN PART
         self.rnn = nn.GRU(61, 128, bidirectional = True, batch_first=True)
@@ -77,18 +72,23 @@ class CRNN(nn.Module):
 
     def forward(self, x, debug = False):
 
-        x = F.relu(self.td1(x))
-        x = self.bn1(x)
-        x = F.relu(self.td2(x))
-        x = self.bn2(x)
-        x = F.relu(self.td3(x))
-        x = self.bn3(x)
-        x = F.relu(self.td4(x))
-        x = self.bn4(x)
-        x = F.relu(self.td5(x))
+        n = x.size(0)
+        # NCTWH -> NTCWH -> (NT)CWH
+        x = x.transpose(1,2)
+        x = x.reshape(-1, *x.shape[2:])
 
-        #N1TWH -> N(TW)H
-        x = x.reshape(x.size(0), -1, x.size(4))
+        x = F.relu(self.conv1(x))
+        x = self.bn1(x)
+        x = F.relu(self.conv2(x))
+        x = self.bn2(x)
+        x = F.relu(self.conv3(x))
+        x = self.bn3(x)
+        x = F.relu(self.conv4(x))
+        x = self.bn4(x)
+        x = F.relu(self.conv5(x))
+
+        #(NT)1WH -> N(TW)H
+        x = x.reshape(n, -1, x.size(-1))
         x = self.rnn(x)[0]
         x = self.classifier(x)
         x = x.reshape(x.size(0), 20, 25, 63)
