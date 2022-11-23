@@ -121,7 +121,7 @@ class WeimarSolo(object):
         return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
 
     def fill_pauses(self):
-        eps = 0.01
+        eps = 0.001
         onset = self.melody.onset
         offset = self.melody.onset +  self.melody.duration
         pitch = self.melody.pitch
