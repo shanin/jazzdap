@@ -121,7 +121,7 @@ class WeimarSolo(object):
         return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
 
     def fill_pauses(self):
-        eps = 0.0001
+        eps = 0.01
         onset = self.melody.onset
         offset = self.melody.onset +  self.melody.duration
         pitch = self.melody.pitch
@@ -551,6 +551,7 @@ class WeimarSlicer(Dataset):
         if self.tag is None:
             self._assemble_tensors()
         else:
+            #use cached version (or save generated version to cache)
             self.cache_folder = os.path.join(
                 config['shared']['exp_folder'],
                 config['dataset']['cache_folder'],

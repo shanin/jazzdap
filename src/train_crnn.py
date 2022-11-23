@@ -26,7 +26,7 @@ def prepare_dataset(config, partition, wrapper_type):
             autoload_sfnmf=True, 
             autoload_audio=False
         ), config,
-        tag = f'{partition}'
+        tag = f'{partition}-eps_0.01'
     )
     
     return dataset
