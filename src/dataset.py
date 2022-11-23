@@ -568,7 +568,7 @@ class WeimarSlicer(Dataset):
                 os.makedirs(self.cache_folder, exist_ok = True)
                 torch.save(self.X, os.path.join(self.cache_folder, 'X.pt'))
                 torch.save(self.y, os.path.join(self.cache_folder, 'y.pt'))
-                torch.save(self.track_length, os.path.join(self.cache_folder, 'track_length.pt'))
+                torch.save(self.track_lengths, os.path.join(self.cache_folder, 'track_lengths.pt'))
                 torch.save(self.number_of_samples, os.path.join(self.cache_folder, 'number_of_samples.pt'))
 
 
