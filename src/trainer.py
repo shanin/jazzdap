@@ -57,7 +57,7 @@ class CRNNtrainer:
 
             pred = self.model(x)
             self.optimizer.zero_grad()
-            loss = self.criterion(pred, y)
+            loss = self.criterion(pred.view(-1, 63), y.view(-1, 63)) #fix later
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
