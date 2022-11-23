@@ -99,7 +99,7 @@ class CRNN(nn.Module):
 class CNN_base(nn.Module):
 
     def __init__(self):
-        super(CRNN, self).__init__()
+        super(CNN_base, self).__init__()
         self.td1 = TimeDistributed(
             nn.Conv2d(
                 1, 64, kernel_size = (1, 5), stride = (1, 5), 
