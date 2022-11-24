@@ -7,7 +7,7 @@ number_of_patches = 20
 patch_size = 25
 segment_length = 500  # number_of_patches x patch_size
 feature_size = 301
-number_of_classes = 62
+#number_of_classes = 62
 step_notes = 5
 SR = 22050
 hop_size = 256
@@ -33,7 +33,8 @@ class TimeDistributed(nn.Module):
 
 class CRNN(nn.Module):
 
-    def __init__(self):
+    def __init__(self, n_classes = 62):
+        self.n_classes = n_classes
         super(CRNN, self).__init__()
         self.conv1 = nn.Conv2d(
                 1, 64, kernel_size = (1, 5), stride = (1, 5), 
@@ -67,10 +68,10 @@ class CRNN(nn.Module):
         
         # RNN PART
         self.rnn = nn.GRU(61, 128, bidirectional = True, batch_first=True)
-        self.classifier = nn.Linear(256, 63)
+        self.classifier = nn.Linear(256, self.n_classes)
 
 
-    def forward(self, x, debug = False):
+    def forward(self, x):
 
         n = x.size(0)
         # NCTWH -> NTCWH -> (NT)CWH
@@ -91,7 +92,7 @@ class CRNN(nn.Module):
         x = x.reshape(n, -1, x.size(-1))
         x = self.rnn(x)[0]
         x = self.classifier(x)
-        x = x.reshape(x.size(0), 20, 25, 63)
+        x = x.reshape(x.size(0), 20, 25, self.n_classes)
         return x
 
 
@@ -131,7 +132,8 @@ class CNN_base(nn.Module):
         self.td5 = TimeDistributed(
             nn.Conv2d(
                 16, 1, kernel_size = (1, 1), 
-                dtype=torch.float
+                dtype=torch.float,
+                padding = 'same'
             )
         )
         

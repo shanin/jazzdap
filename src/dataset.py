@@ -121,7 +121,7 @@ class WeimarSolo(object):
         return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
 
     def fill_pauses(self):
-        eps = 0.001
+        eps = 0.00001
         onset = self.melody.onset
         offset = self.melody.onset +  self.melody.duration
         pitch = self.melody.pitch
@@ -158,7 +158,18 @@ class WeimarSolo(object):
         )
         return transform(self.audio)
 
-    def resampled_transcription(self, onehot = True):
+    def transcription_labels(self):
+        res_gt_pitch = self.resampled_transcription()
+        lowest_note = 33 # 55Hz, A1, following SF-NMF algorithm
+        highest_note = 93 # 1760Hz, A6
+        res_gt_pitch[res_gt_pitch > highest_note] = highest_note
+        res_gt_pitch[res_gt_pitch == 0] = lowest_note - 1
+        res_gt_pitch = res_gt_pitch - lowest_note + 1
+        res_gt_pitch[res_gt_pitch < 0] = 1
+        return res_gt_pitch
+
+
+    def resampled_transcription(self):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             ground_truth = self.fill_pauses()
@@ -169,10 +180,8 @@ class WeimarSolo(object):
                 ground_truth.voicing,
                 times_new
             )
-            if onehot:
-                return transcription2onehot(res_gt_pitch)
-            else:
-                return res_gt_pitch
+        return res_gt_pitch
+
         
 
     def mono_audio(self):
@@ -475,7 +484,7 @@ class WeimarSlicer(Dataset):
         last_offset = sample.melody.onset.iloc[-1] + sample.melody.duration.iloc[-1]
         start = floor(first_onset * (self.sampling_rate / self.hop))
         stop = floor(last_offset * (self.sampling_rate / self.hop)) + 1
-        return sfnmf[:, start:stop], labels[:, start:stop]
+        return sfnmf[:, start:stop], labels[start:stop]
     
 
     def _prepare_HF0_tensor(self, sfnmf):
@@ -499,20 +508,20 @@ class WeimarSlicer(Dataset):
 
 
     def _prepare_labels_tensor(self, labels):
-        length_of_sequence = labels.shape[1]
+        length_of_sequence = labels.shape[0]
         number_of_segments = int(floor(length_of_sequence/self.segment_length))
 
         y = np.append(
-            labels[:, :(number_of_segments * self.segment_length)],
-            labels[:, -self.segment_length: ], 
+            labels[np.newaxis, :(number_of_segments * self.segment_length)],
+            labels[np.newaxis, -self.segment_length: ], 
             axis=1
         )
         y = y.T
 
-        number_of_samples = int(y.shape[0] / (self.number_of_patches * self.patch_size))
+        number_of_samples = int(y.shape[0] / (self.segment_length))
         y = np.reshape(
             y,
-            (number_of_samples, self.number_of_patches, self.patch_size, self.number_of_classes)
+            (number_of_samples, self.number_of_patches, self.patch_size)
         )
         return torch.tensor(y, dtype=torch.float), length_of_sequence, number_of_samples
 
@@ -525,7 +534,7 @@ class WeimarSlicer(Dataset):
 
         for sample in tqdm(self.dataset):
             sfnmf = sample.sfnmf
-            labels = sample.resampled_transcription(onehot=True)
+            labels = sample.transcription_labels()
             sfnmf, labels = self._cut(sample, sfnmf, labels)
             
             HF0_tensor, hf0_len, samples = self._prepare_HF0_tensor(sfnmf)
