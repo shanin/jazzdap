@@ -52,6 +52,7 @@ class CRNNtrainer:
         )
 
         for x, y in train_dataloader:
+            y = y.type(torch.long)
             x = x.to(self.device)
             y = y.to(self.device)
 
@@ -81,6 +82,7 @@ class CRNNtrainer:
 
         with torch.no_grad():
             for x, y in val_dataloader:
+                y = y.type(torch.long)
                 x = x.to(self.device)
                 y = y.to(self.device)
                 pred = self.model(x)
