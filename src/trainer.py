@@ -58,9 +58,11 @@ class CRNNtrainer:
             self.optimizer.zero_grad()
 
             pred = self.model(x)
-            loss = self.criterion(pred.reshape(-1, 63), y.reshape(-1, 63)) #fix later
+            loss = self.criterion(pred.reshape(-1, 62), y.reshape(-1)) #fix later
 
             loss.backward()
+
+
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
             self.optimizer.step()
 
@@ -82,7 +84,7 @@ class CRNNtrainer:
                 x = x.to(self.device)
                 y = y.to(self.device)
                 pred = self.model(x)
-                loss = self.criterion(pred, y)
+                loss = self.criterion(pred.reshape(-1, 62), y.reshape(-1))
                 loss_batches.append(loss.item())
         mlflow.log_metric('val_loss', np.mean(loss_batches))
         self.model.train()
@@ -110,6 +112,16 @@ class CRNNtrainer:
         else:
             return pred.reshape(-1, pred.size(-1))
 
+    #fix later
+    def unfold_labels(self, labels, track_length):
+        if track_length % (500) != 0:
+            unfolded = labels[:-1].reshape(-1)
+            unfolded_tail = labels[-1].reshape(-1)
+            tail_len = track_length - unfolded.size(0)
+            return torch.cat([unfolded, unfolded_tail[-tail_len:]], dim = 0)
+        else:
+            return labels.reshape(-1)
+
     def predict(self, X, length):
         self.model.eval()
         test_dataloader = DataLoader(X, self.batch_size, shuffle = False)
@@ -127,12 +139,12 @@ class CRNNtrainer:
     def evaluate(self, part):
         rows = []
         for x, y, z in self.dataset[part]:
-            pitch_estimates = np.argmax(self.predict(x, z).detach().numpy(), axis = 1) + 35
-            labels = np.argmax(self.unfold_predictions(y, z).detach().numpy(), axis = 1) + 35
+            pitch_estimates = np.argmax(self.predict(x, z).detach().numpy(), axis = 1) + 32
+            labels = self.unfold_labels(y, z).detach().numpy() + 32
 
             #some more technical debt
-            pitch_estimates[pitch_estimates == 35] = 0
-            labels[labels == 35] = 0
+            pitch_estimates[pitch_estimates == 32] = 0
+            labels[labels == 32] = 0
     
             evaluation_results = {}
 
