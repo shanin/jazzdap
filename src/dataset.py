@@ -524,7 +524,7 @@ class WeimarSlicer(Dataset):
             y,
             (number_of_samples, self.number_of_patches, self.patch_size)
         )
-        return torch.tensor(y, dtype=torch.float), length_of_sequence, number_of_samples
+        return torch.tensor(y, dtype=torch.int), length_of_sequence, number_of_samples
 
     def _assemble_tensors(self):
         
