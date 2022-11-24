@@ -178,7 +178,8 @@ class WeimarSolo(object):
                 ground_truth.onset,
                 ground_truth.pitch,
                 ground_truth.voicing,
-                times_new
+                times_new,
+                kind = 'nearest'
             )
         return res_gt_pitch
 
