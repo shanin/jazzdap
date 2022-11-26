@@ -170,20 +170,19 @@ class WeimarSolo(object):
 
 
     def resampled_transcription(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            ground_truth = self.fill_pauses()
-            times_new = np.arange(self.sfnmf.shape[1]) * 0.0116 
-            res_gt_pitch, res_gt_times = resample_melody_series(
-                ground_truth.onset,
-                ground_truth.pitch,
-                ground_truth.voicing,
-                times_new,
-                kind = 'nearest'
-            )
-        return res_gt_pitch
+        def sec2step(x):
+            return np.round(x * 22050 / 256) #more debt
+        onsets = self.melody.onset.values
+        offsets = self.melody.onset.values + self.melody.duration.values
+        pitches = self.melody.pitch.values
+        onsets = sec2step(onsets)
+        offsets = sec2step(offsets)
+        sequence_length = self.sfnmf.shape[1]
+        result = np.zeros(sequence_length)
+        for onset, offset, pitch in zip(onsets, offsets, pitches):
+            result[int(onset) : int(offset)] = pitch
+        return result
 
-        
 
     def mono_audio(self):
         return self.audio.mean(axis = 0)
