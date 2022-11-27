@@ -60,4 +60,5 @@ crnn_trainer:
   weight_decay: 0.0001
   label_smoothing: 0.25
   model_folder: models
+  data_tag: eps_0.0001
 
