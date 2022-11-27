@@ -70,7 +70,7 @@ class CRNNtrainer:
             mlflow.log_metric('train_loss', loss.item(), self.step_counter)
             self.step_counter += 1    
     
-    def calculate_validation_loss(self):
+    def calculate_validation_loss(self, step = None):
         self.model.eval()
         loss_batches = []
 
@@ -88,16 +88,16 @@ class CRNNtrainer:
                 pred = self.model(x)
                 loss = self.criterion(pred.reshape(-1, 62), y.reshape(-1))
                 loss_batches.append(loss.item())
-        mlflow.log_metric('val_loss', np.mean(loss_batches))
+        mlflow.log_metric('val_loss', np.mean(loss_batches), step = step)
         self.model.train()
             
     def train(self):
         for epoch_num in tqdm(range(self.epochs_num)):
             mlflow.log_metric("lr", self.optimizer.param_groups[0]["lr"], step=epoch_num)
             self.train_epoch()
-            self.calculate_validation_loss()
-            val_oa = self.evaluate('val-separated')
-            self.evaluate('test-separated')
+            self.calculate_validation_loss(epoch_num)
+            val_oa = self.evaluate('val-separated', epoch_num)
+            self.evaluate('test-separated', epoch_num)
             self.scheduler.step()
             if val_oa > self.current_val_oa:
                 self.current_val_oa = val_oa
@@ -138,7 +138,7 @@ class CRNNtrainer:
         return self.unfold_predictions(torch.cat(pred_batches, dim = 0), length)
 
 
-    def evaluate(self, part):
+    def evaluate(self, part, step = None):
         rows = []
         for x, y, z in self.dataset[part]:
             pitch_estimates = np.argmax(self.predict(x, z).detach().numpy(), axis = 1) + 32
@@ -168,11 +168,11 @@ class CRNNtrainer:
     
             rows.append(evaluation_results)
         evaluation_results = pd.DataFrame(rows)
-        mlflow.log_metric(f'OA_{part}', evaluation_results['Overall Accuracy'].mean())
-        mlflow.log_metric(f'VR_{part}', evaluation_results['Voicing Recall'].mean())
-        mlflow.log_metric(f'VFA_{part}', evaluation_results['Voicing False Alarm'].mean())
-        mlflow.log_metric(f'RPA_{part}', evaluation_results['Raw Pitch Accuracy'].mean())
-        mlflow.log_metric(f'RCA_{part}', evaluation_results['Raw Chroma Accuracy'].mean())
+        mlflow.log_metric(f'OA_{part}', evaluation_results['Overall Accuracy'].mean(), step = step)
+        mlflow.log_metric(f'VR_{part}', evaluation_results['Voicing Recall'].mean(), step = step)
+        mlflow.log_metric(f'VFA_{part}', evaluation_results['Voicing False Alarm'].mean(), step = step)
+        mlflow.log_metric(f'RPA_{part}', evaluation_results['Raw Pitch Accuracy'].mean(), step = step)
+        mlflow.log_metric(f'RCA_{part}', evaluation_results['Raw Chroma Accuracy'].mean(), step = step)
         return evaluation_results['Overall Accuracy'].mean()
 
     def save_model(self):
