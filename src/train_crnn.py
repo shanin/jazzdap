@@ -12,7 +12,7 @@ from trainer import CRNNtrainer
 import mlflow
 
 
-def prepare_dataset(config, partition, wrapper_type):
+def prepare_dataset(config, partition, wrapper_type, data_tag):
 
     if wrapper_type == 'separated':
         wrapper = WeimarSeparate
@@ -26,16 +26,17 @@ def prepare_dataset(config, partition, wrapper_type):
             autoload_sfnmf=True, 
             autoload_audio=False
         ), config,
-        tag = f'{partition}-eps_0.0001'
+        tag = f'{partition}-{data_tag}'
     )
     
     return dataset
 
 def setup_dataset_dict(config, parts, types):
+    data_tag = config['crnn_trainer'].get('data_tag', 'default')
     dataset_dict = {}
     for part, type in zip(parts, types):
         print(f'loading partition: {part}-{type}')
-        dataset_dict[f'{part}-{type}'] = prepare_dataset(config, part, type)
+        dataset_dict[f'{part}-{type}'] = prepare_dataset(config, part, type, data_tag)
     return dataset_dict
 
 def setup_device(config):
@@ -44,7 +45,9 @@ def setup_device(config):
 
 def setup_optimizer(config, parameters):
     lr = config['crnn_trainer']['lr']
-    return torch.optim.Adam(parameters, lr=lr)
+    weight_decay = config['crnn_trainer'].get('weight_decay', 0)
+    mlflow.log_param('weight_decay', weight_decay)
+    return torch.optim.Adam(parameters, lr=lr, weight_decay = weight_decay)
 
 def setup_scheduler(config, optimizer):
     lr = config['crnn_trainer']['lr']
@@ -55,6 +58,7 @@ def setup_scheduler(config, optimizer):
 
 def setup_criterion(config):
     label_smoothing = config['crnn_trainer'].get('label_smoothing', 0)
+    mlflow.log_param('label_smoothing', label_smoothing)
     return torch.nn.CrossEntropyLoss(label_smoothing=label_smoothing)
 
 

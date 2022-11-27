@@ -151,9 +151,9 @@ class CRNNtrainer:
             evaluation_results = {}
 
             (ref_v, ref_c, est_v, est_c) = mir_eval.melody.to_cent_voicing(np.arange(np.size(labels)),
-                                                                            weimar2hertz(labels),
+                                                                            weimar2hertz(labels) * (256 / 22050),
                                                                             np.arange(np.size(labels)),
-                                                                            weimar2hertz(pitch_estimates))
+                                                                            weimar2hertz(pitch_estimates)* (256 / 22050))
 
             vr, vfa = mir_eval.melody.voicing_measures(ref_v, est_v)
             rpa = mir_eval.melody.raw_pitch_accuracy(ref_v, ref_c, est_v, est_c, cent_tolerance=80)
