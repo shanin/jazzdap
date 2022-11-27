@@ -10,9 +10,6 @@ import sqlite3
 import IPython.display as ipd
 import matplotlib.pyplot as plt
 from madmom.features.beats import RNNBeatProcessor, BeatTrackingProcessor
-from mir_eval.melody import resample_melody_series
-import warnings
-from utils import transcription2onehot
 from sklearn.preprocessing import normalize
 from tqdm import tqdm
 
@@ -89,6 +86,15 @@ TEST_ARTISTS = [
     'John Coltrane', 'Kenny Wheeler', 'Paul Desmond', 'Sidney Bechet', 
     'Sonny Rollins', 'Wynton Marsalis'
 ]
+
+# these tracks should be omitted from test to maintain compatibility with 2019 results
+TEST_STOPLIST = {
+    79: "ChrisPotter_Arjuna_Solo",
+    82: "ChrisPotter_PopTune#1_Solo",
+    223: "JohnColtrane_GiantSteps-2_Solo",
+    259: "KennyWheeler_PassItOn_Solo",
+    382: "SonnyRollins_I'llRememberApril_AlternateTake2_Solo"
+}
 
 
 INSTRUMENTS = [
@@ -303,8 +309,11 @@ class WeimarDB(Dataset):
         solo_info = self.get_solo_info()
         if partition == 'train':
             solo_info = solo_info[solo_info.performer.isin(TRAIN_ARTISTS)]
+        elif partition == 'test-full':
+            solo_info = solo_info[solo_info.performer.isin(TEST_ARTISTS)]
         elif partition == 'test':
             solo_info = solo_info[solo_info.performer.isin(TEST_ARTISTS)]
+            solo_info = solo_info[~solo_info.melid.isin(TEST_STOPLIST.keys())]
         elif partition == 'val':
             solo_info = solo_info[solo_info.performer.isin(VAL_ARTISTS)]
         if instrument in INSTRUMENTS:
