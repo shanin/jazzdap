@@ -1,3 +1,14 @@
+crnn_trainer:
+  device: 3
+  epochs_num: 200
+  validation_period: 10
+  batch_size: 64
+  lr: 0.001
+  lr_final: 0.00001
+  weight_decay: 0.001
+  label_smoothing: 0.25
+  model_folder: models
+  data_tag: eps_0.0001
 shared:
   exp_folder: exp
   raw_data: data/raw/weimar
@@ -50,15 +61,4 @@ crnn:
   step_notes: 5
   RNN: GRU
   number_of_channels: 1
-crnn_trainer:
-  device: 3
-  epochs_num: 200
-  validation_period: 10
-  batch_size: 64
-  lr: 0.001
-  lr_final: 0.00001
-  weight_decay: 0.0001
-  label_smoothing: 0.25
-  model_folder: models
-  data_tag: eps_0.0001
 
