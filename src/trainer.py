@@ -123,7 +123,7 @@ class CRNNtrainer:
         for sf_input, labels, track_length in self.dataset[part]:
 
             result = PredictedSolo(
-                predictions = self.predict(sf_input, track_length),
+                predictions = self.predict(sf_input),
                 labels = labels,
                 track_length = track_length,
                 segment_length = self.segment_length
