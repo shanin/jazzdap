@@ -102,6 +102,49 @@ INSTRUMENTS = [
     'ts-c', 'g', 'vib'
 ]
 
+class PredictedSolo(object):
+
+    def _unfold_predictions(self, pred, track_length):
+        if track_length % self._segment_length != 0:
+            unfolded = pred[:-1].reshape(-1, pred.size(-1))
+            unfolded_tail = pred[-1].reshape(-1, pred.size(-1))
+            tail_len = track_length - unfolded.size(0)
+            return torch.cat([unfolded, unfolded_tail[-tail_len:]], dim = 0)
+        else:
+            return pred.reshape(-1, pred.size(-1))
+
+    def _unfold_labels(self, labels, track_length):
+        if labels == None:
+            return None
+        if track_length % self._segment_length != 0:
+            unfolded = labels[:-1].reshape(-1)
+            unfolded_tail = labels[-1].reshape(-1)
+            tail_len = track_length - unfolded.size(0)
+            return torch.cat([unfolded, unfolded_tail[-tail_len:]], dim = 0)
+        else:
+            return labels.reshape(-1)
+
+    def _aggregate_predictions(self):
+        voiced_frames = (np.argmax(self.predictions, axis = 1) > 0).astype(int)
+        pitch_class = np.argmax(self.predictions[:, 1:], axis = 1) + 1
+        pitch_class[np.argwhere(voiced_frames == 0), :] *= -1
+        self.predictions = pitch_class
+
+    def _class_to_midi(self):
+        self.predictions[self.predictions > 0] += self.class_shift
+        self.predictions[self.predictions < 0] -= self.class_shift
+        self.labels[self.labels > 0] += self.class_shift
+
+    def __init__(self, predictions = None, labels = None, track_length = None, 
+                 segment_length = None, class_shift = 32):
+        self.class_shift = class_shift
+        self._segment_length = segment_length
+        self.predictions = self._unfold_predictions(predictions, track_length).detach().numpy()
+        self.labels = self._unfold_labels(self, labels, track_length).detach().numpy()
+        self._aggregate_predictions()
+
+        
+
 class WeimarSolo(object):
     def __init__(self):
         self.melid = None

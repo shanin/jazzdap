@@ -1,3 +1,20 @@
+shared:
+  exp_folder: exp
+  raw_data: data/raw/weimar
+sfnmf:
+  Fs: 22050
+  hop: 256.0
+  save: True
+  output_folder: preprocessed/sfnmf
+crnn:
+  number_of_patches: 20
+  patch_size: 25
+  segment_length: 500
+  feature_size: 301
+  number_of_classes: 62
+  step_notes: 5
+  RNN: GRU
+  number_of_channels: 1
 crnn_trainer:
   device: 3
   epochs_num: 200
@@ -9,9 +26,6 @@ crnn_trainer:
   label_smoothing: 0.1
   model_folder: models
   data_tag: 91
-shared:
-  exp_folder: exp
-  raw_data: data/raw/weimar
 download_packages:
   package_dir: packages
   packages:
@@ -47,18 +61,4 @@ baseline_evaluation:
   melodia_suffix: _vamp_mtg-melodia_melodia_melody.csv
   melodia_folder: baseline_output/melodia
   b2_output_file: melodia_evaluation.csv
-sfnmf:
-  Fs: 22050
-  hop: 256.0
-  save: True
-  output_folder: preprocessed/sfnmf
-crnn:
-  number_of_patches: 20
-  patch_size: 25
-  segment_length: 500
-  feature_size: 301
-  number_of_classes: 63
-  step_notes: 5
-  RNN: GRU
-  number_of_channels: 1
 
