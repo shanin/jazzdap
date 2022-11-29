@@ -2,11 +2,10 @@ import argparse
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 
 from utils import load_config
 from dataset import WeimarDB, WeimarCollated, WeimarSeparate
-from model import CRNN, CNN_base
+from model import CRNN
 from trainer import CRNNtrainer
 
 import mlflow
