@@ -127,7 +127,7 @@ class PredictedSolo(object):
     def _aggregate_predictions(self):
         voiced_frames = (np.argmax(self.predictions, axis = 1) > 0).astype(int)
         pitch_class = np.argmax(self.predictions[:, 1:], axis = 1) + 1
-        pitch_class[np.argwhere(voiced_frames == 0), :] *= -1
+        pitch_class = pitch_class - 2 * (1 - voiced_frames) * pitch_class
         self.predictions = pitch_class
 
     def _class_to_midi(self):
@@ -142,6 +142,7 @@ class PredictedSolo(object):
         self.predictions = self._unfold_predictions(predictions, track_length).detach().numpy()
         self.labels = self._unfold_labels(labels, track_length).detach().numpy()
         self._aggregate_predictions()
+        self._class_to_midi()
 
         
 
