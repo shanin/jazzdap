@@ -140,7 +140,7 @@ class PredictedSolo(object):
         self.class_shift = class_shift
         self._segment_length = segment_length
         self.predictions = self._unfold_predictions(predictions, track_length).detach().numpy()
-        self.labels = self._unfold_labels(self, labels, track_length).detach().numpy()
+        self.labels = self._unfold_labels(labels, track_length).detach().numpy()
         self._aggregate_predictions()
 
         
