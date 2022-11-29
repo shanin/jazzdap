@@ -5,9 +5,9 @@ from utils import weimar2hertz
 def evaluate_sample(labels, predictions):
 
     (ref_v, ref_c, est_v, est_c) = mir_eval.melody.to_cent_voicing(
-        ref_time = np.arange(np.size(labels) * (256 / 22050)),
+        ref_time = np.arange(np.size(labels)) * (256 / 22050),
         ref_freq = weimar2hertz(labels),
-        est_time = np.arange(np.size(labels) * (256 / 22050)),
+        est_time = np.arange(np.size(labels)) * (256 / 22050),
         est_freq = weimar2hertz(predictions)
     )
 
