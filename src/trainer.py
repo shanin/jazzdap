@@ -33,8 +33,8 @@ class CRNNtrainer:
         self.current_val_oa = 0
     
     def _parse_config(self, config):
-        self.epochs_num = config['crnn_trainer'].get(['epochs_num'], 200)
-        self.batch_size = config['crnn_trainer'].get(['batch_size'], 64)
+        self.epochs_num = config['crnn_trainer'].get('epochs_num', 200)
+        self.batch_size = config['crnn_trainer'].get('batch_size', 64)
         self.output_folder = os.path.join(
             config['shared'].get(['exp_folder'], 'exp'),
             config['crnn_trainer'].get(['model_folder'], 'models')
@@ -132,7 +132,7 @@ class CRNNtrainer:
             evaluation_results = evaluate_sample(result.labels, result.predictions)
             rows.append(evaluation_results)
         evaluation_results = pd.DataFrame(rows)
-        
+
         mlflow.log_metric(f'OA_{part}', evaluation_results['Overall Accuracy'].mean(), step = step)
         mlflow.log_metric(f'VR_{part}', evaluation_results['Voicing Recall'].mean(), step = step)
         mlflow.log_metric(f'VFA_{part}', evaluation_results['Voicing False Alarm'].mean(), step = step)
