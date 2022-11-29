@@ -275,7 +275,8 @@ def weimar2hertz(n):
             return 0
         else:
             return 440 * (2 ** ((n - 69) / 12))
-    res = 440 * (2 ** ((n - 69) / 12))
+    sign = ((n >= 0).astype(int) * 2) - 1
+    res = sign * 440 * (2 ** ((np.abs(n) - 69) / 12))
     res[n == 0] = 0
     return res
 
