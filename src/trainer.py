@@ -36,8 +36,8 @@ class CRNNtrainer:
         self.epochs_num = config['crnn_trainer'].get('epochs_num', 200)
         self.batch_size = config['crnn_trainer'].get('batch_size', 64)
         self.output_folder = os.path.join(
-            config['shared'].get(['exp_folder'], 'exp'),
-            config['crnn_trainer'].get(['model_folder'], 'models')
+            config['shared'].get('exp_folder', 'exp'),
+            config['crnn_trainer'].get('model_folder', 'models')
         )
         self.segment_length = config['crnn']['patch_size'] * config['crnn']['number_of_patches']
 
