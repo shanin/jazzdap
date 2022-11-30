@@ -22,13 +22,13 @@ def precompute_HF0(config):
         if not os.path.exists(output_path):
             os.mkdir(output_path)
     
-    wdb = WeimarDB(config)
+    wdb = WeimarDB(config, autoload_demucs=True, autoload_audio=False)
     filename = '.resampled-sf-nmf-input.wav'
     for sample in wdb:
         print(sample.melid, sample.filename)
         if 'melid_' + str(sample.melid).zfill(3) + '.npy' in os.listdir(output_path):
             continue
-        torchaudio.save(filename, sample.resampled_audio(), sample.resample_rate)
+        torchaudio.save(filename, sample, sample.sample_rate)
 
         Fs = config['sfnmf']['Fs']
         hop = config['sfnmf']['hop'] / Fs
