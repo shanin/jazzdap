@@ -28,7 +28,7 @@ def precompute_HF0(config):
         print(sample.melid, sample.filename)
         if 'melid_' + str(sample.melid).zfill(3) + '.npy' in os.listdir(output_path):
             continue
-        torchaudio.save(filename, sample, sample.sample_rate)
+        torchaudio.save(filename, sample.resampled_audio(), sample.resample_rate)
 
         Fs = config['sfnmf']['Fs']
         hop = config['sfnmf']['hop'] / Fs
