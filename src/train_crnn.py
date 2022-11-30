@@ -61,13 +61,12 @@ def setup_criterion(config):
     return torch.nn.CrossEntropyLoss(label_smoothing=label_smoothing)
 
 
-def setup_trainer(config, model):
+def setup_trainer(config, 
+                  model, 
+                  partitions = ['train', 'test', 'val', 'val'],
+                  modes = ['collated', 'separated', 'collated', 'separated']):
     parameters = model.parameters()
-    dataset_dict = setup_dataset_dict(
-        config, 
-        ['train', 'test', 'val', 'val'],
-        ['collated', 'separated', 'collated', 'separated']
-    )
+    dataset_dict = setup_dataset_dict(config, partitions, modes)
     device = setup_device(config)
     criterion = setup_criterion(config)
     optimizer = setup_optimizer(config, parameters)

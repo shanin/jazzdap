@@ -25,7 +25,7 @@ crnn_trainer:
   weight_decay: 0.0001
   label_smoothing: 0.1
   model_folder: models
-  data_tag: 91
+  data_tag: 91-separated
 download_packages:
   package_dir: packages
   packages:
@@ -37,7 +37,7 @@ preprocess:
   output_file: csv_youtube_filtered.csv
   wav_dir: preprocessed/wdb_wavs
 dataset:
-  sfnmf_dir: preprocessed/sfnmf
+  sfnmf_dir: preprocessed/sfnmf_separated
   demucs_dir: preprocessed/separated
   audio_dir: wjd_solos
   patch_dir: wjd_solos_patch
