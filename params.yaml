@@ -5,7 +5,7 @@ sfnmf:
   Fs: 22050
   hop: 256.0
   save: True
-  output_folder: preprocessed/sfnmf
+  output_folder: preprocessed/sfnmf_separated
 crnn:
   number_of_patches: 20
   patch_size: 25
