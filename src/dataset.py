@@ -152,6 +152,7 @@ class WeimarSolo(object):
         self.trackid = None
         self.filename = None
         self.audio = None
+        self.separated_audio = None
         self.solostart = None
         self.solostop = None
         self.melody = None
@@ -321,7 +322,8 @@ class WeimarDB(Dataset):
             instrument = 'any', 
             performer = None,
             autoload_audio = True, 
-            autoload_sfnmf = False
+            autoload_sfnmf = False,
+            autoload_demucs = False
         ):
         config_shared = config['shared']
         config_local = config['dataset']
@@ -341,8 +343,15 @@ class WeimarDB(Dataset):
             config_local['sfnmf_dir']
         )
 
+        #fix later
+        self._demucs_dir = os.path.join(
+            config_shared['exp_folder'],
+            config_local.get('demucs_dir', '')
+        )
+
         self.autoload_audio = autoload_audio
         self.autoload_sfnmf = autoload_sfnmf
+        self.autoload_demucs = autoload_demucs
         self._resample_rate = config_local.get('resample_rate', None)
         self.load_beats = config_local.get('load_beats', False)
         self._init_column_names()
@@ -483,6 +492,13 @@ class WeimarDB(Dataset):
         )
         solo.sfnmf = np.load(path)
 
+    def _load_separated(self, solo):
+        path = os.path.join(
+            self._demucs_dir,
+            f'melid_{str(solo.melid).zfill(3)}.wav'
+        )
+        solo.audio, solo.sample_rate = torchaudio.load(path)
+
     def get_solo_info(self):
         colnames_str = ', '.join(self._solo_info_columns)
         query = f'SELECT {colnames_str} FROM solo_info'
@@ -513,6 +529,8 @@ class WeimarDB(Dataset):
             self._load_audio(solo)
         if self.autoload_sfnmf:
             self._load_sfnmf(solo)
+        if self.autoload_demucs:
+            self._load_separated(solo)
         return solo
         
     def __len__(self):

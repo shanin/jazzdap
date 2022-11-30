@@ -38,6 +38,7 @@ preprocess:
   wav_dir: preprocessed/wdb_wavs
 dataset:
   sfnmf_dir: preprocessed/sfnmf
+  demucs_dir: preprocessed/separated
   audio_dir: wjd_solos
   patch_dir: wjd_solos_patch
   weimardb: data/raw/weimar/wjazzd.db
