@@ -495,7 +495,7 @@ class WeimarDB(Dataset):
     def _load_separated(self, solo):
         path = os.path.join(
             self._demucs_dir,
-            f'melid_{str(solo.melid).zfill(3)}.wav'
+            f'{str(solo.melid).zfill(3)}.wav'
         )
         solo.audio, solo.sample_rate = torchaudio.load(path)
 
