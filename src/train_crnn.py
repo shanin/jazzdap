@@ -64,9 +64,13 @@ def setup_criterion(config):
 def setup_trainer(config, 
                   model, 
                   partitions = ['train', 'test', 'val', 'val'],
-                  modes = ['collated', 'separated', 'collated', 'separated']):
+                  modes = ['collated', 'separated', 'collated', 'separated'],
+                  test_time_dataset = None):
     parameters = model.parameters()
-    dataset_dict = setup_dataset_dict(config, partitions, modes)
+    if test_time_dataset:
+        dataset_dict = test_time_dataset
+    else:
+        dataset_dict = setup_dataset_dict(config, partitions, modes)
     device = setup_device(config)
     criterion = setup_criterion(config)
     optimizer = setup_optimizer(config, parameters)

@@ -81,29 +81,24 @@ def make_pianoroll_plots(config):
     eval_mel = get_baseline_evaluation_result(config, 'melodia')
     eval_sfnmf = get_baseline_evaluation_result(config, 'sfnmf')
     wdb = WeimarDB(config)
-    counter = 0
     for sample in tqdm(wdb):
-        counter += 1
-        if counter < 200:
-            pass
-        else:
-            sfnmf_pred = get_predictions(config, sample, baseline = 'sfnmf')
-            melodia_pred = get_predictions(config, sample, baseline = 'melodia')
-            mel_stats = eval_mel[eval_mel.Name == sample['query']].iloc[0].to_dict()
-            sf_stats = eval_sfnmf[eval_sfnmf.Name == sample['query']].iloc[0].to_dict()
-            filename = get_output_filename_for_pianoroll(config, sample)
-            try:
-                comparative_pianoroll(
-                    sample['melody'],
-                    sfnmf_pred,
-                    melodia_pred,
-                    output_file = filename,
-                    title = sample['query'],
-                    eval_mel = mel_stats,
-                    eval_sfnmf = sf_stats
-                )
-            except:
-                print(sample['query'], ' : image is too large')
+        sfnmf_pred = get_predictions(config, sample, baseline = 'sfnmf')
+        melodia_pred = get_predictions(config, sample, baseline = 'melodia')
+        mel_stats = eval_mel[eval_mel.Name == sample['query']].iloc[0].to_dict()
+        sf_stats = eval_sfnmf[eval_sfnmf.Name == sample['query']].iloc[0].to_dict()
+        filename = get_output_filename_for_pianoroll(config, sample)
+        try:
+            comparative_pianoroll(
+                sample['melody'],
+                sfnmf_pred,
+                melodia_pred,
+                output_file = filename,
+                title = sample['query'],
+                eval_mel = mel_stats,
+                eval_sfnmf = sf_stats
+            )
+        except:
+            print(sample['query'], ' : image is too large')
 
 
 def get_quantized_labels(sample, predictions):
@@ -211,10 +206,16 @@ def get_predictions(config, sample, scale = 'weimar', filter = True, baseline = 
 
 
 def fill_pauses(sample):
-    onset = sample['melody']['onset']
-    offset = sample['melody']['onset'] +  sample['melody']['duration']
-    pitch = sample['melody']['pitch']
+    onset = sample.melody.onset
+    offset = sample.melody.onset +  sample.melody.duration
+    pitch = sample.melody.pitch
     rows = []
+    row = {
+        'pitch': 0,
+        'onset': 0,
+        'voicing': 0
+    }
+    rows.append(row)
     for index in range(onset.shape[0]):
         row = {
             'pitch': weimar2hertz(pitch.iloc[index]),
@@ -303,5 +304,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     config = load_config(args.config)
-    #evaluate(config)
+    evaluate(config)
     make_pianoroll_plots(config)

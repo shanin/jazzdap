@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from madmom.features.beats import RNNBeatProcessor, BeatTrackingProcessor
 from sklearn.preprocessing import normalize
 from tqdm import tqdm
+from sourcefilter import extract_f0
 
 WDB_SIZE = 456
 
@@ -135,6 +136,30 @@ class PredictedSolo(object):
         self.predictions[self.predictions < 0] -= self.class_shift
         self.labels[self.labels > 0] += self.class_shift
 
+    def generate_csv(self, filename):
+        cleaned_predictions = self.predictions
+        cleaned_predictions[cleaned_predictions < 0] = 0
+        step = 256 / 22050
+        prev = 0
+        prev_onset = -1
+        duration = 0
+        notes = []
+        for idx, val in enumerate(cleaned_predictions):
+            if val != prev:
+                if prev != 0:
+                    notes.append({
+                        'pitch': prev,
+                        'duration': (duration + 1) * step,
+                        'onset': prev_onset 
+                    })
+                prev_onset = idx * step 
+                duration = 0
+                prev = val
+            else:
+                duration += 1
+        pd.DataFrame(notes).to_csv(filename)
+
+
     def __init__(self, predictions = None, labels = None, track_length = None, 
                  segment_length = None, class_shift = 32):
         self.class_shift = class_shift
@@ -145,6 +170,46 @@ class PredictedSolo(object):
         self._class_to_midi()
 
         
+class TestSolo(object):
+    
+    def _parse_config(self, config):
+        self.sample_rate = config['sfnmf']['Fs']
+        self.hop = config['sfnmf']['hop']
+
+    def _calculate_sfnmf(self):
+        Fs = self.sample_rate
+        hop = self.hop / self.sample_rate
+        audio_fpath = 'foo'
+        input_args = [u'{0}'.format(audio_fpath), 
+                      u'--samplingRate={0}'.format(Fs), 
+                      u'--hopsize={0}'.format(hop)]
+
+        _, HF0, *rest = extract_f0(self.audio.mean(axis = 0).numpy(), input_args)
+        self.sfnmf = HF0
+        #os.remove(tmp_filename)
+
+    def transcription_labels(self):
+        # a placeholder for compatibility purposes
+        return np.zeros(self.sfnmf.shape[1])
+
+    def __init__(self, filename, config):
+        self._parse_config(config)
+        self.filename = filename
+        audio, sample_rate = torchaudio.load(filename)
+        transform = Resample(
+            orig_freq = sample_rate, 
+            new_freq = self.sample_rate
+        )
+        self.audio = transform(audio)
+        self._calculate_sfnmf()
+        
+
+    def play(self):
+        print(self.__repr__())
+        return ipd.Audio(rate = self.sample_rate, data = self.audio)
+    
+    def __repr__(self):
+        return self.filename
 
 class WeimarSolo(object):
     def __init__(self):
@@ -606,7 +671,8 @@ class WeimarSlicer(Dataset):
         for sample in tqdm(self.dataset):
             sfnmf = sample.sfnmf
             labels = sample.transcription_labels()
-            sfnmf, labels = self._cut(sample, sfnmf, labels)
+            if not self.test_time: ## bug here?
+                sfnmf, labels = self._cut(sample, sfnmf, labels)
             
             HF0_tensor, hf0_len, samples = self._prepare_HF0_tensor(sfnmf)
             labels_tensor, _, _ = self._prepare_labels_tensor(labels)
@@ -622,11 +688,12 @@ class WeimarSlicer(Dataset):
         self.number_of_samples = number_of_samples
 
 
-    def __init__(self, dataset, config, tag = None):
+    def __init__(self, dataset, config, tag = None, test_time = False):
 
         self._parse_config(config)
         self.tag = tag
         self.dataset = dataset
+        self.test_time = test_time
 
         if self.tag is None:
             self._assemble_tensors()
