@@ -6,6 +6,9 @@ sfnmf:
   hop: 256.0
   save: True
   output_folder: preprocessed/sfnmf #preprocessed/sfnmf_separated
+crepe:
+  Fs: 44100
+  hop: 441.0
 crnn:
   number_of_patches: 20
   patch_size: 25
@@ -15,6 +18,7 @@ crnn:
   step_notes: 5
   RNN: GRU
   number_of_channels: 1
+  features: crepe
 crnn_trainer:
   device: 3
   epochs_num: 200
@@ -38,6 +42,7 @@ preprocess:
   wav_dir: preprocessed/wdb_wavs
 dataset:
   sfnmf_dir: preprocessed/sfnmf #preprocessed/sfnmf_separated
+  crepe_dir: preprocessed/crepe_activations
   demucs_dir: preprocessed/separated
   audio_dir: wjd_solos
   patch_dir: wjd_solos_patch

@@ -139,7 +139,7 @@ class PredictedSolo(object):
     def generate_csv(self, filename):
         cleaned_predictions = self.predictions
         cleaned_predictions[cleaned_predictions < 0] = 0
-        step = 256 / 22050
+        step = self.window
         prev = 0
         prev_onset = -1
         duration = 0
@@ -161,8 +161,9 @@ class PredictedSolo(object):
 
 
     def __init__(self, predictions = None, labels = None, track_length = None, 
-                 segment_length = None, class_shift = 32):
+                 segment_length = None, class_shift = 32, window = 256 / 22050):
         self.class_shift = class_shift
+        self.window = window
         self._segment_length = segment_length
         self.predictions = self._unfold_predictions(predictions, track_length).detach().numpy()
         self.labels = self._unfold_labels(labels, track_length).detach().numpy()
@@ -185,12 +186,12 @@ class TestSolo(object):
                       u'--hopsize={0}'.format(hop)]
 
         _, HF0, *rest = extract_f0(self.audio.mean(axis = 0).numpy(), input_args)
-        self.sfnmf = HF0
+        self.features = HF0
         #os.remove(tmp_filename)
 
     def transcription_labels(self):
         # a placeholder for compatibility purposes
-        return np.zeros(self.sfnmf.shape[1])
+        return np.zeros(self.features.shape[1])
 
     def __init__(self, filename, config):
         self._parse_config(config)
@@ -211,6 +212,7 @@ class TestSolo(object):
     def __repr__(self):
         return self.filename
 
+
 class WeimarSolo(object):
     def __init__(self):
         self.melid = None
@@ -228,7 +230,8 @@ class WeimarSolo(object):
         self.performer = None
         self.title = None
         self.instrument = None
-        self.sfnmf = None
+        self.features = None
+        self.window = None
 
     def __str__(self):
         return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
@@ -236,7 +239,8 @@ class WeimarSolo(object):
     def __repr__(self):
         return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
 
-    def fill_pauses(self):
+    def fill_pauses_deprecated(self):
+        #remove later
         eps = 0.00001
         onset = self.melody.onset
         offset = self.melody.onset +  self.melody.duration
@@ -287,13 +291,13 @@ class WeimarSolo(object):
 
     def resampled_transcription(self):
         def sec2step(x):
-            return np.round(x * 22050 / 256) #more debt
+            return np.round(x / self.window)
         onsets = self.melody.onset.values
         offsets = self.melody.onset.values + self.melody.duration.values
         pitches = self.melody.pitch.values
         onsets = sec2step(onsets)
         offsets = sec2step(offsets)
-        sequence_length = self.sfnmf.shape[1]
+        sequence_length = self.features.shape[1]
         result = np.zeros(sequence_length)
         for onset, offset, pitch in zip(onsets, offsets, pitches):
             result[int(onset) : int(offset)] = pitch
@@ -386,9 +390,10 @@ class WeimarDB(Dataset):
             partition = 'full', 
             instrument = 'any', 
             performer = None,
-            autoload_audio = True, 
-            autoload_sfnmf = False,
-            autoload_demucs = False
+            load_audio = True, 
+            load_sfnmf = False,
+            load_demucs = False,
+            load_crepe = False
         ):
         config_shared = config['shared']
         config_local = config['dataset']
@@ -409,16 +414,24 @@ class WeimarDB(Dataset):
         )
 
         #fix later
+        self._crepe_dir = os.path.join(
+            config_shared['exp_folder'],
+            config_local.get('crepe_dir', '')
+        )
         self._demucs_dir = os.path.join(
             config_shared['exp_folder'],
             config_local.get('demucs_dir', '')
         )
 
-        self.autoload_audio = autoload_audio
-        self.autoload_sfnmf = autoload_sfnmf
-        self.autoload_demucs = autoload_demucs
+        self.load_audio = load_audio
+        self.load_sfnmf = load_sfnmf
+        self.load_crepe = load_crepe
+        self.load_demucs = load_demucs
         self._resample_rate = config_local.get('resample_rate', None)
         self.load_beats = config_local.get('load_beats', False)
+        self._sfnmf_Fs = config['sfnmf'].get('Fs', 22050)
+        self._sfnmf_hop = config['sfnmf'].get('hop', 256)
+        self._crepe_window = 0.01 #put it to config
         self._init_column_names()
         self._init_database_cursor(config_local)
         self._init_melid_list(partition, instrument, performer)
@@ -555,7 +568,19 @@ class WeimarDB(Dataset):
             self._sfnmf_dir,
             f'melid_{str(solo.melid).zfill(3)}.npy'
         )
-        solo.sfnmf = np.load(path)
+        solo.window = self._sfnmf_hop / self._sfnmf_Fs
+        solo.features = np.load(path)
+
+    def _load_crepe_activations(self, solo):
+        path = os.path.join(
+            self._crepe_dir,
+            f'{str(solo.melid).zfill(3)}.npy'
+        )
+        solo.window = self._crepe_window
+        solo.features = np.load(path).T
+        #cut crepe activations 360 -> 301 (this is ugly so far)
+        solo.features = solo.features[48:, :]
+        solo.features = solo.features[:301, :]
 
     def _load_separated(self, solo):
         path = os.path.join(
@@ -590,12 +615,14 @@ class WeimarDB(Dataset):
         self._parse_track_info(solo)
         self._parse_solo_info(solo)
         solo.resample_rate = self._resample_rate
-        if self.autoload_audio:
+        if self.load_audio:
             self._load_audio(solo)
-        if self.autoload_sfnmf:
+        if self.load_sfnmf:
             self._load_sfnmf(solo)
-        if self.autoload_demucs:
+        if self.load_demucs:
             self._load_separated(solo)
+        if self.load_crepe:
+            self._load_crepe_activations(solo)
         return solo
         
     def __len__(self):
@@ -611,25 +638,26 @@ class WeimarSlicer(Dataset):
         self.patch_size = config['crnn']['patch_size']
         self.feature_size = config['crnn']['feature_size']
         self.number_of_classes = config['crnn']['number_of_classes']
-        self.sampling_rate = config['sfnmf']['Fs']
-        self.hop = config['sfnmf']['hop']
+        self.features_type = config['crnn']['features']
+        self.sampling_rate = config[self.features_type]['Fs']
+        self.hop = config[self.features_type]['hop']
 
 
-    def _cut(self, sample, sfnmf, labels):
+    def _cut(self, sample, features, labels):
         first_onset = sample.melody.onset.iloc[0]
         last_offset = sample.melody.onset.iloc[-1] + sample.melody.duration.iloc[-1]
         start = floor(first_onset * (self.sampling_rate / self.hop))
         stop = floor(last_offset * (self.sampling_rate / self.hop)) + 1
-        return sfnmf[:, start:stop], labels[start:stop]
+        return features[:, start:stop], labels[start:stop]
     
 
-    def _prepare_HF0_tensor(self, sfnmf):
-        length_of_sequence = sfnmf.shape[1]
+    def _prepare_HF0_tensor(self, features):
+        length_of_sequence = features.shape[1]
         number_of_segments = int(floor(length_of_sequence/self.segment_length))
 
         HF0 = np.append(
-            sfnmf[:, :number_of_segments * self.segment_length],
-            sfnmf[:, -self.segment_length:], 
+            features[:, :number_of_segments * self.segment_length],
+            features[:, -self.segment_length:], 
                 axis=1
         )
         HF0 = normalize(HF0, norm='l1', axis=0)
@@ -669,12 +697,12 @@ class WeimarSlicer(Dataset):
         number_of_samples = []
 
         for sample in tqdm(self.dataset):
-            sfnmf = sample.sfnmf
+            features = sample.features
             labels = sample.transcription_labels()
             if not self.test_time: ## bug here?
-                sfnmf, labels = self._cut(sample, sfnmf, labels)
+                features, labels = self._cut(sample, features, labels)
             
-            HF0_tensor, hf0_len, samples = self._prepare_HF0_tensor(sfnmf)
+            HF0_tensor, hf0_len, samples = self._prepare_HF0_tensor(features)
             labels_tensor, _, _ = self._prepare_labels_tensor(labels)
 
             X_list_of_tensors.append(HF0_tensor)
