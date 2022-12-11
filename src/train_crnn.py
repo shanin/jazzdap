@@ -71,7 +71,7 @@ def setup_trainer(config,
                   model, 
                   partitions = ['train', 'test', 'val', 'val'],
                   modes = ['collated', 'separated', 'collated', 'separated'],
-                  feature_type = 'sfnmf',
+                  feature_type = None,
                   test_time_dataset = None):
     parameters = model.parameters()
     if test_time_dataset:
