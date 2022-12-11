@@ -78,6 +78,8 @@ def setup_trainer(config,
         dataset_dict = test_time_dataset
     else:
         dataset_dict = setup_dataset_dict(config, partitions, modes, feature_type)
+    if not feature_type:
+        feature_type = config['crnn_trainer'].get('features', 'sfnmf')
     device = setup_device(config)
     criterion = setup_criterion(config)
     optimizer = setup_optimizer(config, parameters)

@@ -28,8 +28,9 @@ crnn_trainer:
   lr_final: 0.00001
   weight_decay: 0.0001
   label_smoothing: 0.1
-  model_folder: models
+  model_folder: models-crepe
   data_tag: 91 #91-separated
+  features: crepe
 download_packages:
   package_dir: packages
   packages:
