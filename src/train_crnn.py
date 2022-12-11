@@ -73,13 +73,14 @@ def setup_trainer(config,
                   modes = ['collated', 'separated', 'collated', 'separated'],
                   feature_type = None,
                   test_time_dataset = None):
+    
+    if not feature_type:
+        feature_type = config['crnn_trainer'].get('features', 'sfnmf')
     parameters = model.parameters()
     if test_time_dataset:
         dataset_dict = test_time_dataset
     else:
         dataset_dict = setup_dataset_dict(config, partitions, modes, feature_type)
-    if not feature_type:
-        feature_type = config['crnn_trainer'].get('features', 'sfnmf')
     device = setup_device(config)
     criterion = setup_criterion(config)
     optimizer = setup_optimizer(config, parameters)
