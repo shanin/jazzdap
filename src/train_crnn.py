@@ -11,31 +11,37 @@ from trainer import CRNNtrainer
 import mlflow
 
 
-def prepare_dataset(config, partition, wrapper_type, data_tag):
+def prepare_dataset(config, partition, wrapper_type, feature_type, data_tag):
 
     if wrapper_type == 'separated':
         wrapper = WeimarSeparate
     else:
         wrapper = WeimarCollated
 
+    if feature_type == 'sfnmf':
+        load_sfnmf, load_crepe = True, False
+    elif feature_type == 'crepe':
+        load_sfnmf, load_crepe = False, True
+
     dataset = wrapper(
         WeimarDB(
             config,
             partition = partition,
-            autoload_sfnmf=True, 
-            autoload_audio=False
+            load_sfnmf=load_sfnmf,
+            load_crepe=load_crepe, 
+            load_audio=False
         ), config,
-        tag = f'{partition}-{data_tag}'
+        tag = f'{partition}-{feature_type}-{data_tag}'
     )
     
     return dataset
 
-def setup_dataset_dict(config, parts, types):
+def setup_dataset_dict(config, parts, types, feature_type):
     data_tag = config['crnn_trainer'].get('data_tag', 'default')
     dataset_dict = {}
     for part, type in zip(parts, types):
-        print(f'loading partition: {part}-{type}')
-        dataset_dict[f'{part}-{type}'] = prepare_dataset(config, part, type, data_tag)
+        print(f'loading partition: {part}-{feature_type}-{type}')
+        dataset_dict[f'{part}-{type}'] = prepare_dataset(config, part, type, feature_type, data_tag)
     return dataset_dict
 
 def setup_device(config):
@@ -65,12 +71,13 @@ def setup_trainer(config,
                   model, 
                   partitions = ['train', 'test', 'val', 'val'],
                   modes = ['collated', 'separated', 'collated', 'separated'],
+                  feature_type = 'sfnmf',
                   test_time_dataset = None):
     parameters = model.parameters()
     if test_time_dataset:
         dataset_dict = test_time_dataset
     else:
-        dataset_dict = setup_dataset_dict(config, partitions, modes)
+        dataset_dict = setup_dataset_dict(config, partitions, modes, feature_type)
     device = setup_device(config)
     criterion = setup_criterion(config)
     optimizer = setup_optimizer(config, parameters)
