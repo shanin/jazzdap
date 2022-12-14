@@ -1,15 +1,24 @@
-shared:
-  exp_folder: exp
-  raw_data: data/raw/weimar
-sfnmf:
+weimar_dataset:
+  data_variant: raw_data    #could be changed to raw_data_demucs
+  weimardb: data/raw/weimar/wjazzd.db
+  raw_data: data/raw/weimar/wjd_solos
+  raw_data_demucs: exp/preprocessed/separated
+  feature_type: sfnmf    #crepe
+  feature_variant: default #demucs_frontend
+  labeling_type: onsetsandframes #
+sampler:
+  cache_folder: exp/data_cache
+sfnmf_features:
   Fs: 22050
   hop: 256.0
-  save: True
-  output_folder: preprocessed/sfnmf #preprocessed/sfnmf_separated
-crepe:
+  sfnmf_path: exp/preprocessed/sfnmf
+  demucs_sfnmf_path: exp/preprocessed/sfnmf_separated
+crepe_features:
   Fs: 44100
   hop: 441.0
-crnn:
+  window: 0.01
+  crepe_path: exp/preprocessed/crepe_activations
+crnn_model:
   number_of_patches: 20
   patch_size: 25
   segment_length: 500
@@ -18,8 +27,7 @@ crnn:
   step_notes: 5
   RNN: GRU
   number_of_channels: 1
-  features: crepe
-crnn_trainer:
+trainer:
   device: 3
   epochs_num: 200
   validation_period: 10
@@ -28,44 +36,5 @@ crnn_trainer:
   lr_final: 0.00001
   weight_decay: 0.0001
   label_smoothing: 0.1
-  model_folder: models-crepe
+  model_folder: exp/models
   data_tag: 91 #91-separated
-  features: crepe
-download_packages:
-  package_dir: packages
-  packages:
-    baseline_1: https://github.com/dogacbasaran/ismir2018_dominant_melody_estimation.git
-preprocess:
-  youtube_index: csv_youtube.csv
-  audio_dir: audio
-  output_dir: preprocessed
-  output_file: csv_youtube_filtered.csv
-  wav_dir: preprocessed/wdb_wavs
-dataset:
-  sfnmf_dir: preprocessed/sfnmf #preprocessed/sfnmf_separated
-  crepe_dir: preprocessed/crepe_activations
-  demucs_dir: preprocessed/separated
-  audio_dir: wjd_solos
-  patch_dir: wjd_solos_patch
-  weimardb: data/raw/weimar/wjazzd.db
-  resample_rate: 22050
-  cache_folder: data_cache
-baseline:
-  repo: packages/baseline_1
-  input_data: preprocessed/wdb_wavs
-  Fs: 22050
-  hop: 256.0
-  pitch_corrected: False
-  output_folder: baseline_output
-  h5py_folder: h5py_files
-  weights_path: predict/weights_C-RNN.h5
-  melody_folder: csv_melody
-baseline_evaluation:
-  output_folder: baseline_evaluation
-  predictions_folder: baseline_output/csv_melody
-  pianoroll_folder: pianoroll
-  b1_output_file: sf_nmf_evaluation.csv
-  melodia_suffix: _vamp_mtg-melodia_melodia_melody.csv
-  melodia_folder: baseline_output/melodia
-  b2_output_file: melodia_evaluation.csv
-

@@ -1,440 +1,52 @@
-import os
 import pandas as pd
-import numpy as np
 from torch.utils.data import Dataset
-import torch
-import torchaudio
-from torchaudio.transforms import Resample
-from math import floor
+
 import sqlite3
-import IPython.display as ipd
-import matplotlib.pyplot as plt
-from madmom.features.beats import RNNBeatProcessor, BeatTrackingProcessor
-from sklearn.preprocessing import normalize
-from tqdm import tqdm
-from sourcefilter import extract_f0
 
-WDB_SIZE = 456
+from solo import construct_solo_class
+from wjd_constants import *
 
-MISTAKES = {
-    'DickieWells_Jo-Jo_Orig': 'DickieWells_Jo=Jo_Orig',
-    "BobBerg_ IDidn'tKnowWhatTimeItWas_Orig": "BobBerg_IDidn'tKnowWhatTimeItWas_Orig",
-    "Bob Berg_SecondSightEnterTheSpirit_Orig": "BobBerg_SecondSightEnterTheSpirit_Orig",
-    "DexterGordon_Society Red_Orig": "DexterGordon_SocietyRed_Orig",
-    "DizzyGillespie_Be-Bop_Orig": "DizzyGillespie_Be=Bop_Orig",
-    "Don Byas_OutOfNowhere_Orig": "DonByas_OutOfNowhere_Orig",
-    "JohnColtrane_26-2_Orig": "JohnColtrane_26=2_Orig",
-    "SonnyStitt_BluesInBe-Bop_Orig": "SonnyStitt_BluesInBe=Bop_Orig",
-    "LesterYoung_D.B. Blues_Orig": "LesterYoung_D.B.Blues_Orig",
-    "MilesDavis_Eighty-One_Orig": "MilesDavis_Eighty=One_Orig",
-    "Dave Holland_TakeTheColtrane_Orig": "DaveHolland_TakeTheColtrane_Orig",
-    "ChrisPotter_InASentimentalMood_Orig": "ChrisPotter_InaSentimentalMood_Orig",
-    "MilesDavis_Gingerbreadboy_Orig": "MilesDavis_GingerbreadBoy_Orig" 
-}
-
-SOLO_MISTAKES = {
-    "FatsNavarro_GoodBait_No1_Solo": "FatsNavarro_GoodBait_Solo",
-    "FatsNavarro_GoodBait_No2_Solo": "FatsNavarro_GoodBait_AlternateTake_Solo",
-    "BranfordMarsalis_Ummg_Solo": "BranfordMarsalis_U.M.M.G._Solo",
-    "SonnyRollins_I'llRememberApril-AlternateTake2_Solo": "SonnyRollins_I'llRememberApril_AlternateTake2_Solo",
-    "PaulDesmond_BlueRondoAlaTurk_Solo": "PaulDesmond_BlueRondoALaTurk_Solo",
-    "BranfordMarsalis_GutbucketSteepy_Solo": "BranfordMarsalis_GutBucketSteepy_Solo",
-    "DizzyGillespie_Blue'NBoogie_Solo": "DizzyGillespie_Blue'nBoogie_Solo",
-    "EricDolphy_Aisha_solo": "EricDolphy_Aisha_Solo",
-    "KidOry_Who'sit_Solo": "KidOry_Who'sIt_Solo",
-    "WayneShorter_JuJu_Solo": "WayneShorter_Juju_Solo"
-}
-
-SOLO_PATCH_FILES = ['LouisArmstrong_CornetChopSuey_Solo']
-
-SOLOSTART_CORRECTIONS = {
-    43: 29.9,
-    64: -15.345,
-    79: 93.1722,
-    82: -93.1722,
-    171: -64.85,
-    309: -212.5,
-    382: 205.9
-}
-
-
-TRAIN_ARTISTS = [
-    'Art Pepper', 'Benny Carter', 'Benny Goodman', 'Bix Beiderbecke', 
-    'Bob Berg', 'Branford Marsalis', 'Buck Clayton', 'Charlie Parker', 
-    'Chet Baker', 'Clifford Brown', 'Coleman Hawkins', 'Curtis Fuller', 
-    'David Liebman', 'David Murray', 'Dickie Wells', 'Dizzy Gillespie', 
-    'Don Byas', 'Don Ellis', 'Eric Dolphy', 'Freddie Hubbard', 
-    'Gerry Mulligan', 'Hank Mobley', 'Harry Edison', 
-    'Henry Allen', 'Herbie Hancock', 'J.C. Higginbotham', 'J.J. Johnson', 
-    'Joe Lovano', 'John Abercrombie', 'Johnny Dodds', 'Johnny Hodges', 
-    'Joshua Redman', 'Kai Winding', 'Kenny Dorham', 'Kenny Garrett', 
-    'Kid Ory', 'Lee Konitz', 'Lee Morgan', 'Lester Young', 'Lionel Hampton', 
-    'Louis Armstrong', 'Michael Brecker', 'Miles Davis', 'Milt Jackson', 
-    'Ornette Coleman', 'Pat Martino', 'Pat Metheny', 
-    'Pepper Adams', 'Red Garland', 'Rex Stewart', 
-    'Roy Eldridge', 'Sonny Stitt', 'Stan Getz', 'Steve Coleman', 
-    'Steve Lacy', 'Steve Turre', 'Von Freeman', 'Warne Marsh', 
-    'Wayne Shorter', 'Woody Shaw', 'Zoot Sims'
-]
-
-VAL_ARTISTS = [
-    'Nat Adderley', 'George Coleman', 'Phil Woods'
-]
-
-TEST_ARTISTS = [
-    'Ben Webster', 'Cannonball Adderley', 'Charlie Shavers', 'Chu Berry', 
-    'Chris Potter', 'Dexter Gordon', 'Fats Navarro', 'Joe Henderson', 
-    'John Coltrane', 'Kenny Wheeler', 'Paul Desmond', 'Sidney Bechet', 
-    'Sonny Rollins', 'Wynton Marsalis'
-]
-
-# these tracks should be omitted from test to maintain compatibility with 2019 results
-TEST_STOPLIST = {
-    79: "ChrisPotter_Arjuna_Solo",
-    82: "ChrisPotter_PopTune#1_Solo",
-    223: "JohnColtrane_GiantSteps-2_Solo",
-    259: "KennyWheeler_PassItOn_Solo",
-    382: "SonnyRollins_I'llRememberApril_AlternateTake2_Solo"
-}
-
-
-INSTRUMENTS = [
-    'cl', 'as', 'ts', 'cor', 'tp', 'tb', 'ss', 'bcl', 'bs', 'p',
-    'ts-c', 'g', 'vib'
-]
-
-class PredictedSolo(object):
-
-    def _unfold_predictions(self, pred, track_length):
-        if track_length % self._segment_length != 0:
-            unfolded = pred[:-1].reshape(-1, pred.size(-1))
-            unfolded_tail = pred[-1].reshape(-1, pred.size(-1))
-            tail_len = track_length - unfolded.size(0)
-            return torch.cat([unfolded, unfolded_tail[-tail_len:]], dim = 0)
-        else:
-            return pred.reshape(-1, pred.size(-1))
-
-    def _unfold_labels(self, labels, track_length):
-        if labels == None:
-            return None
-        if track_length % self._segment_length != 0:
-            unfolded = labels[:-1].reshape(-1)
-            unfolded_tail = labels[-1].reshape(-1)
-            tail_len = track_length - unfolded.size(0)
-            return torch.cat([unfolded, unfolded_tail[-tail_len:]], dim = 0)
-        else:
-            return labels.reshape(-1)
-
-    def _aggregate_predictions(self):
-        voiced_frames = (np.argmax(self.predictions, axis = 1) > 0).astype(int)
-        pitch_class = np.argmax(self.predictions[:, 1:], axis = 1) + 1
-        pitch_class = pitch_class - 2 * (1 - voiced_frames) * pitch_class
-        self.predictions = pitch_class
-
-    def _class_to_midi(self):
-        self.predictions[self.predictions > 0] += self.class_shift
-        self.predictions[self.predictions < 0] -= self.class_shift
-        self.labels[self.labels > 0] += self.class_shift
-
-    def generate_csv(self, filename):
-        cleaned_predictions = self.predictions
-        cleaned_predictions[cleaned_predictions < 0] = 0
-        step = self.window
-        prev = 0
-        prev_onset = -1
-        duration = 0
-        notes = []
-        for idx, val in enumerate(cleaned_predictions):
-            if val != prev:
-                if prev != 0:
-                    notes.append({
-                        'pitch': prev,
-                        'duration': (duration + 1) * step,
-                        'onset': prev_onset 
-                    })
-                prev_onset = idx * step 
-                duration = 0
-                prev = val
-            else:
-                duration += 1
-        pd.DataFrame(notes).to_csv(filename)
-
-
-    def __init__(self, predictions = None, labels = None, track_length = None, 
-                 segment_length = None, class_shift = 32, window = 256 / 22050):
-        self.class_shift = class_shift
-        self.window = window
-        self._segment_length = segment_length
-        self.predictions = self._unfold_predictions(predictions, track_length).detach().numpy()
-        self.labels = self._unfold_labels(labels, track_length).detach().numpy()
-        self._aggregate_predictions()
-        self._class_to_midi()
-
-        
-class TestSolo(object):
-    
-    def _parse_config(self, config):
-        self.sample_rate = config['sfnmf']['Fs']
-        self.hop = config['sfnmf']['hop']
-
-    def _calculate_sfnmf(self):
-        Fs = self.sample_rate
-        hop = self.hop / self.sample_rate
-        audio_fpath = 'foo'
-        input_args = [u'{0}'.format(audio_fpath), 
-                      u'--samplingRate={0}'.format(Fs), 
-                      u'--hopsize={0}'.format(hop)]
-
-        _, HF0, *rest = extract_f0(self.audio.mean(axis = 0).numpy(), input_args)
-        self.features = HF0
-        #os.remove(tmp_filename)
-
-    def transcription_labels(self):
-        # a placeholder for compatibility purposes
-        return np.zeros(self.features.shape[1])
-
-    def __init__(self, filename, config):
-        self._parse_config(config)
-        self.filename = filename
-        audio, sample_rate = torchaudio.load(filename)
-        transform = Resample(
-            orig_freq = sample_rate, 
-            new_freq = self.sample_rate
-        )
-        self.audio = transform(audio)
-        self._calculate_sfnmf()
-        
-
-    def play(self):
-        print(self.__repr__())
-        return ipd.Audio(rate = self.sample_rate, data = self.audio)
-    
-    def __repr__(self):
-        return self.filename
-
-
-class WeimarSolo(object):
-    def __init__(self):
-        self.melid = None
-        self.trackid = None
-        self.filename = None
-        self.audio = None
-        self.separated_audio = None
-        self.solostart = None
-        self.solostop = None
-        self.melody = None
-        self.beats = None
-        self.sample_rate = None
-        self.resample_rate = None
-        self.predicted_beats = None
-        self.performer = None
-        self.title = None
-        self.instrument = None
-        self.features = None
-        self.window = None
-
-    def __str__(self):
-        return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
-    
-    def __repr__(self):
-        return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
-
-    def fill_pauses_deprecated(self):
-        #remove later
-        eps = 0.00001
-        onset = self.melody.onset
-        offset = self.melody.onset +  self.melody.duration
-        pitch = self.melody.pitch
-        rows = []
-        row = {
-            'pitch': 0,
-            'onset': 0,
-            'voicing': 0
-        }
-        rows.append(row)
-        prev_offset = -1
-        for index in range(onset.shape[0]):
-            if np.abs(prev_offset - onset.iloc[index]) < eps:
-                rows.pop()
-            row = {
-                'pitch': pitch.iloc[index],
-                'onset': onset.iloc[index],
-                'voicing': 1
-            }
-            rows.append(row)
-            row = {
-                'pitch': 0,
-                'onset': offset.iloc[index],
-                'voicing': 0
-            }
-            rows.append(row)
-            prev_offset = offset.iloc[index]
-        return pd.DataFrame(rows)
-
-    def resampled_audio(self):   
-        transform = Resample(
-            orig_freq = self.sample_rate, 
-            new_freq = self.resample_rate
-        )
-        return transform(self.audio)
-
-    def transcription_labels(self):
-        res_gt_pitch = self.resampled_transcription()
-        lowest_note = 33 # 55Hz, A1, following SF-NMF algorithm
-        highest_note = 93 # 1760Hz, A6
-        res_gt_pitch[res_gt_pitch > highest_note] = highest_note
-        res_gt_pitch[res_gt_pitch == 0] = lowest_note - 1
-        res_gt_pitch = res_gt_pitch - lowest_note + 1
-        res_gt_pitch[res_gt_pitch < 0] = 1
-        return res_gt_pitch
-
-
-    def resampled_transcription(self):
-        def sec2step(x):
-            return np.round(x / self.window)
-        onsets = self.melody.onset.values
-        offsets = self.melody.onset.values + self.melody.duration.values
-        pitches = self.melody.pitch.values
-        onsets = sec2step(onsets)
-        offsets = sec2step(offsets)
-        sequence_length = self.features.shape[1]
-        result = np.zeros(sequence_length)
-        for onset, offset, pitch in zip(onsets, offsets, pitches):
-            result[int(onset) : int(offset)] = pitch
-        return result
-
-
-    def mono_audio(self):
-        return self.audio.mean(axis = 0)
-
-    def predict_beats(self):
-        activations = RNNBeatProcessor()(self.mono_audio().numpy())
-        self.predicted_beats = BeatTrackingProcessor(fps=100)(activations)
-        return self.predicted_beats
-
-    def export_to_sv(self):
-        pd.DataFrame(
-            {
-                'onset': self.melody.onset,
-                'duration': self.melody.duration,
-                'pitch': self.melody.pitch
-            }
-        ).to_csv(self.filename_solo + '.melody.csv', index = False)
-
-    def play(self):
-        print(self.__repr__())
-        return ipd.Audio(rate = self.sample_rate, data = self.audio)
-
-    def pianoroll(self, predictions = None, beats = None, 
-            output_file = None, title = None, scale_factor = 0.7, height = 10):
-
-        width = min(self.melody.onset.max() * scale_factor, 400)
-        _, ax = plt.subplots(figsize=(width, height))
-        
-        lowest_note = int(self.melody.pitch.min())
-        highest_note = int(self.melody.pitch.max())
-        first_onset = self.melody.onset.min() - 2
-        last_onset = self.melody.onset.max() + 2
-
-        #octave boundaries
-        for index in range(lowest_note - 1, highest_note + 1):
-            if index % 12 == 11:
-                color_ = 'gray'
-            else:
-                color_ = 'gainsboro'
-            ax.plot(
-                [first_onset, last_onset], 
-                [index + 0.5, index + 0.5], 
-                color = color_,
-                linewidth = 0.4,
-                label='_nolegend_'
-            )
-
-        #pianoroll background
-        for index in range(lowest_note, highest_note +1):
-            if (index % 12) in [1, 3, 6, 8, 10]:
-                ax.fill_between(
-                    [first_onset, last_onset], 
-                    [index - 0.5, index - 0.5], 
-                    [index + 0.5, index + 0.5], 
-                    color = 'whitesmoke',
-                    label = '_nolegend_'
-                )
-
-        #ground truth onset plot
-        ax.scatter(self.melody.onset, self.melody.pitch, marker='.', color = 'black')
-        
-        #plot note duration
-        for _, row in self.melody.iterrows():
-            time = [row.onset, row.onset + row.duration]
-            pitch = [row.pitch, row.pitch]
-            ax.plot(time, pitch, color = 'black')
-
-        ax.set_yticks([24, 36, 48, 60, 72, 84])
-        ax.set_yticklabels(['C2', 'C3', 'C4', 'C5', 'C6', 'C7'])
-
-        plt.xlabel('seconds')
-        plt.ylabel('pitch')
-        plt.xlim(first_onset, last_onset)
-        plt.ylim(lowest_note - 0.5, highest_note + 0.5)
-        plt.title(self.__repr__())
-        if output_file:
-            plt.savefig(output_file, bbox_inches='tight')
-            plt.close()
             
-
 class WeimarDB(Dataset):
     def __init__(
             self, 
-            config, 
+            config,
             partition = 'full', 
             instrument = 'any', 
             performer = None,
-            load_audio = True, 
-            load_sfnmf = False,
-            load_demucs = False,
-            load_crepe = False
         ):
-        config_shared = config['shared']
-        config_local = config['dataset']
 
-        self._patch_dir = os.path.join(
-            config_shared['raw_data'], 
-            config_local['patch_dir']
-        )
-
-        self._audio_dir = os.path.join(
-            config_shared['raw_data'], 
-            config_local['audio_dir']
-        )
-
-        self._sfnmf_dir = os.path.join(
-            config_shared['exp_folder'],
-            config_local['sfnmf_dir']
-        )
-
-        #fix later
-        self._crepe_dir = os.path.join(
-            config_shared['exp_folder'],
-            config_local.get('crepe_dir', '')
-        )
-        self._demucs_dir = os.path.join(
-            config_shared['exp_folder'],
-            config_local.get('demucs_dir', '')
-        )
-
-        self.load_audio = load_audio
-        self.load_sfnmf = load_sfnmf
-        self.load_crepe = load_crepe
-        self.load_demucs = load_demucs
-        self._resample_rate = config_local.get('resample_rate', None)
-        self.load_beats = config_local.get('load_beats', False)
-        self._sfnmf_Fs = config['sfnmf'].get('Fs', 22050)
-        self._sfnmf_hop = config['sfnmf'].get('hop', 256)
-        self._crepe_window = 0.01 #put it to config
-        self._init_column_names()
-        self._init_database_cursor(config_local)
+        self._parse_config(config)
+        self._init_database_cursor()
         self._init_melid_list(partition, instrument, performer)
+
+    def _parse_config(self, config):
+        self.dataset_type = 'weimar'
+        self.data_variant = config['weimar_dataset'].get('data_variant', 'raw_data')
+        self.database_path = config['weimar_dataset'].get('weimardb')
+        self.feature_type = config['weimar_dataset'].get('feature_type', None)
+        self.labeling_type = config['weimar_dataset'].get('labeling_type', None)
+        self.data_folder = config['weimar_dataset'].get(self.data_variant, None)
+        self.feature_variant = config['weimar_dataset'].get('feature_variant', 'default')
+        
+        self.feature_folder = None
+        if self.feature_type == 'sfnmf':
+            self.feature_folder = config['sfnmf_features'].get('sfnmf_path', None)
+        elif self.feature_type == 'crepe':
+            self.feature_folder = config['crepe_features'].get('crepe_path', None)
+        elif self.feature_variant == 'demucs_frontend':
+            self.feature_folder = config['sfnmf_features'].get('demucs_sfnmf_path')
+
+        if self.data_folder:
+            self.raw_data_type = 'audio'
+        else:
+            self.raw_data_type = None
+
+
+    def _init_database_cursor(self):
+        self._connect = sqlite3.connect(self.database_path)
+        self._cursor = self._connect.cursor()
+
 
     def _init_melid_list(self, partition, instrument, performer):
         solo_info = self.get_solo_info()
@@ -454,326 +66,31 @@ class WeimarDB(Dataset):
         self._melid_list = solo_info.melid.values
 
 
-    def _init_column_names(self):
-        self._melody_columns = [
-            'eventid', 'melid', 'onset', 'pitch', 'duration', 'period', 
-            'division', 'bar', 'beat', 'tatum', 'subtatum', 'num', 'denom', 
-            'beatprops', 'beatdur', 'tatumprops', 'loud_max', 'loud_med', 
-            'loud_sd', 'loud_relpos', 'loud_cent', 'loud_s2b', 'f0_mod', 
-            'f0_range', 'f0_freq_hz', 'f0_med_dev'
-        ]
-        self._solo_info_columns = [
-            'melid', 'trackid', 'compid', 'recordid', 'performer', 'title', 
-            'titleaddon', 'solopart', 'instrument', 'style', 'avgtempo', 
-            'tempoclass', 'rhythmfeel', 'key', 'signature', 'chord_changes', 
-            'chorus_count'
-        ]
-        self._transcription_info_columns = [
-            'melid', 'trackid', 'filename_sv', 'filename_solo', 
-            'solotime', 'solostart_sec', 'status'
-        ]
-        self._track_info_columns = [
-            'trackid', 'compid', 'recordid', 'filename_track', 'lineup',
-            'mbzid', 'trackno', 'recordingdate'
-        ]
-        self._beats_columns = [
-            'beatid', 'melid', 'onset', 'bar', 'beat', 'signature', 'chord',
-            'form', 'bass_pitch', 'chorus_id'
-        ]
-
-
-    def _init_database_cursor(self, config):
-        self._connect = sqlite3.connect(config['weimardb'])
-        self._cursor = self._connect.cursor()
-
-
-    def _parse_transcription_info(self, solo):
-        colnames_str = ', '.join(self._transcription_info_columns)
-        query = f'SELECT {colnames_str} FROM transcription_info WHERE melid = {solo.melid}'
-        transcription_info = pd.DataFrame(
-            self._cursor.execute(query).fetchall(), 
-            columns = self._transcription_info_columns
-        )
-        solo.trackid = transcription_info.trackid.values[0]
-        solo.solostart = max(transcription_info.solostart_sec.values[0], 0)
-        solo.solostart += SOLOSTART_CORRECTIONS.get(solo.melid, 0)
-        solo.solostop = solo.solostart + solo.melody.onset.max() + 2
-        solo.filename_solo = transcription_info.filename_solo.values[0]
-        for key in SOLO_MISTAKES:
-            solo.filename_solo = solo.filename_solo.replace(key, SOLO_MISTAKES[key])
-
-    def _parse_solo_info(self, solo):
-        colnames_str = ', '.join(self._solo_info_columns)
-        query = f'SELECT {colnames_str} FROM solo_info WHERE melid = {solo.melid}'
-        solo_info = pd.DataFrame(
-            self._cursor.execute(query).fetchall(), 
-            columns = self._solo_info_columns
-        )
-        solo.instrument = solo_info.instrument.values[0]
-        solo.performer = solo_info.performer.values[0]
-        solo.title = solo_info.title.values[0]
-
-
-    def _parse_track_info(self, solo):
-        colnames_str = ', '.join(self._track_info_columns)
-        query = f'SELECT {colnames_str} FROM track_info WHERE trackid = {solo.trackid}'
-        track_info = pd.DataFrame(
-            self._cursor.execute(query).fetchall(), 
-            columns = self._track_info_columns
-        )
-        filename = track_info.filename_track.values[0]
-        for key in MISTAKES:
-            filename = filename.replace(key, MISTAKES[key])
-        solo.filename = filename
-    
-
-    def _parse_melody(self, solo):
-        colnames_str = ', '.join(self._melody_columns)
-        query = f'SELECT {colnames_str} FROM melody WHERE melid = {solo.melid}'
-        solo.melody = pd.DataFrame(
-            self._cursor.execute(query).fetchall(), 
-            columns = self._melody_columns
-        )
-
-
-    def _parse_beats(self, solo):
-        colnames_str = ', '.join(self._beats_columns)
-        query = f'SELECT {colnames_str} FROM beats WHERE melid = {solo.melid}'
-        solo.beats = pd.DataFrame(
-            self._cursor.execute(query).fetchall(), 
-            columns = self._beats_columns
-        )
-
-
-    def _load_audio(self, solo):
-        if solo.filename_solo in SOLO_PATCH_FILES:
-            audio_dir = self._patch_dir
-        else:
-            audio_dir = self._audio_dir
-        solo.audio, solo.sample_rate = torchaudio.load(
-            os.path.join(
-                audio_dir, 
-                f'{solo.filename_solo}.wav'
-            )
-        )
-        #sample_start = floor(solo.solostart * solo.sample_rate)
-        #if solo.solostop:
-        #    sample_stop = floor(solo.solostop * solo.sample_rate)
-        #else:
-        #    sample_stop = -1
-        #solo.audio = audio
-
-    def _load_sfnmf(self, solo):
-        path = os.path.join(
-            self._sfnmf_dir,
-            f'melid_{str(solo.melid).zfill(3)}.npy'
-        )
-        solo.window = self._sfnmf_hop / self._sfnmf_Fs
-        solo.features = np.load(path)
-
-    def _load_crepe_activations(self, solo):
-        path = os.path.join(
-            self._crepe_dir,
-            f'{str(solo.melid).zfill(3)}.npy'
-        )
-        solo.window = self._crepe_window
-        solo.features = np.load(path).T
-        #cut crepe activations 360 -> 301 (this is ugly so far)
-        solo.features = solo.features[48:, :]
-        solo.features = solo.features[:301, :]
-
-    def _load_separated(self, solo):
-        path = os.path.join(
-            self._demucs_dir,
-            f'{str(solo.melid).zfill(3)}.wav'
-        )
-        solo.audio, solo.sample_rate = torchaudio.load(path)
-
     def get_solo_info(self):
-        colnames_str = ', '.join(self._solo_info_columns)
+        colnames_str = ', '.join(SOLO_INFO_COLNAMES)
         query = f'SELECT {colnames_str} FROM solo_info'
         return pd.DataFrame(
             self._cursor.execute(query).fetchall(), 
-            columns = self._solo_info_columns
-        )
-
-    def get_transcription_info(self):
-        colnames_str = ', '.join(self._transcription_info_columns)
-        query = f'SELECT {colnames_str} FROM transcription_info'
-        return pd.DataFrame(
-            self._cursor.execute(query).fetchall(), 
-            columns = self._transcription_info_columns
+            columns = SOLO_INFO_COLNAMES
         )
 
     def __getitem__(self, idx):
         
-        solo = WeimarSolo()
-        solo.melid = self._melid_list[idx]
-        self._parse_melody(solo)
-        self._parse_beats(solo)
-        self._parse_transcription_info(solo)
-        self._parse_track_info(solo)
-        self._parse_solo_info(solo)
-        solo.resample_rate = self._resample_rate
-        if self.load_audio:
-            self._load_audio(solo)
-        if self.load_sfnmf:
-            self._load_sfnmf(solo)
-        if self.load_demucs:
-            self._load_separated(solo)
-        if self.load_crepe:
-            self._load_crepe_activations(solo)
+        CustomSolo = construct_solo_class(
+            dataset_type = self.dataset_type,
+            feature_type = self.feature_type,
+            raw_data_type = self.raw_data_type,
+            labeling_type = self.labeling_type
+        )
+
+        solo = CustomSolo(
+            melid = self._melid_list[idx],
+            database_filepath = self.database_path,
+            audio_folder = self.data_folder,
+            features_folder = self.feature_folder
+        )
+
         return solo
         
     def __len__(self):
         return len(self._melid_list)
-
-
-
-class WeimarSlicer(Dataset):
-
-    def _parse_config(self, config):
-        self.segment_length = config['crnn']['segment_length']
-        self.number_of_patches = config['crnn']['number_of_patches']
-        self.patch_size = config['crnn']['patch_size']
-        self.feature_size = config['crnn']['feature_size']
-        self.number_of_classes = config['crnn']['number_of_classes']
-        self.features_type = config['crnn']['features']
-        self.sampling_rate = config[self.features_type]['Fs']
-        self.hop = config[self.features_type]['hop']
-
-
-    def _cut(self, sample, features, labels):
-        first_onset = sample.melody.onset.iloc[0]
-        last_offset = sample.melody.onset.iloc[-1] + sample.melody.duration.iloc[-1]
-        start = floor(first_onset * (self.sampling_rate / self.hop))
-        stop = floor(last_offset * (self.sampling_rate / self.hop)) + 1
-        return features[:, start:stop], labels[start:stop]
-    
-
-    def _prepare_HF0_tensor(self, features):
-        length_of_sequence = features.shape[1]
-        number_of_segments = int(floor(length_of_sequence/self.segment_length))
-
-        HF0 = np.append(
-            features[:, :number_of_segments * self.segment_length],
-            features[:, -self.segment_length:], 
-                axis=1
-        )
-        HF0 = normalize(HF0, norm='l1', axis=0)
-        HF0 = HF0.T
-
-        number_of_samples = int(HF0.shape[0] / (self.number_of_patches * self.patch_size))
-        HF0 = np.reshape(
-            HF0, 
-            (number_of_samples, 1, self.number_of_patches, self.patch_size, self.feature_size)
-        )
-        return torch.tensor(HF0, dtype=torch.float), length_of_sequence, number_of_samples
-
-
-    def _prepare_labels_tensor(self, labels):
-        length_of_sequence = labels.shape[0]
-        number_of_segments = int(floor(length_of_sequence/self.segment_length))
-
-        y = np.append(
-            labels[np.newaxis, :(number_of_segments * self.segment_length)],
-            labels[np.newaxis, -self.segment_length: ], 
-            axis=1
-        )
-        y = y.T
-
-        number_of_samples = int(y.shape[0] / (self.segment_length))
-        y = np.reshape(
-            y,
-            (number_of_samples, self.number_of_patches, self.patch_size)
-        )
-        return torch.tensor(y, dtype=torch.int), length_of_sequence, number_of_samples
-
-    def _assemble_tensors(self):
-        
-        X_list_of_tensors = []
-        y_list_of_tensors = []
-        track_lengths = []
-        number_of_samples = []
-
-        for sample in tqdm(self.dataset):
-            features = sample.features
-            labels = sample.transcription_labels()
-            if not self.test_time: ## bug here?
-                features, labels = self._cut(sample, features, labels)
-            
-            HF0_tensor, hf0_len, samples = self._prepare_HF0_tensor(features)
-            labels_tensor, _, _ = self._prepare_labels_tensor(labels)
-
-            X_list_of_tensors.append(HF0_tensor)
-            y_list_of_tensors.append(labels_tensor)
-            track_lengths.append(hf0_len)
-            number_of_samples.append(samples)
-
-        self.X = torch.cat(X_list_of_tensors, dim = 0)
-        self.y = torch.cat(y_list_of_tensors, dim = 0)
-        self.track_lengths = track_lengths
-        self.number_of_samples = number_of_samples
-
-
-    def __init__(self, dataset, config, tag = None, test_time = False):
-
-        self._parse_config(config)
-        self.tag = tag
-        self.dataset = dataset
-        self.test_time = test_time
-
-        if self.tag is None:
-            self._assemble_tensors()
-        else:
-            #use cached version (or save generated version to cache)
-            self.cache_folder = os.path.join(
-                config['shared']['exp_folder'],
-                config['dataset']['cache_folder'],
-                self.tag
-            )
-            if os.path.exists(self.cache_folder):
-                self.X = torch.load(os.path.join(self.cache_folder, 'X.pt'))
-                self.y = torch.load(os.path.join(self.cache_folder, 'y.pt'))
-                self.track_lengths = \
-                    torch.load(os.path.join(self.cache_folder, 'track_lengths.pt'))
-                self.number_of_samples = \
-                    torch.load(os.path.join(self.cache_folder, 'number_of_samples.pt'))
-            else:
-                self._assemble_tensors()
-                os.makedirs(self.cache_folder, exist_ok = True)
-                torch.save(self.X, os.path.join(self.cache_folder, 'X.pt'))
-                torch.save(self.y, os.path.join(self.cache_folder, 'y.pt'))
-                torch.save(self.track_lengths, os.path.join(self.cache_folder, 'track_lengths.pt'))
-                torch.save(self.number_of_samples, os.path.join(self.cache_folder, 'number_of_samples.pt'))
-
-
-    
-    def __getitem__(self, index):
-        raise NotImplemented
-
-    def __len__(self):
-        raise NotImplemented
-
-class WeimarCollated(WeimarSlicer):
-
-    def __getitem__(self, index):
-        return self.X[index] , self.y[index]
-
-    def __len__(self):
-        return self.X.size(0)
-
-class WeimarSeparate(WeimarSlicer):
-
-    def __getitem__(self, index):
-        start_sample = np.cumsum([0] + self.number_of_samples)
-        stop_sample = np.cumsum(self.number_of_samples)
-        return (
-            self.X[start_sample[index]:stop_sample[index]], 
-            self.y[start_sample[index]:stop_sample[index]], 
-            self.track_lengths[index]
-        )
-        
-
-    def __len__(self):
-        return len(self.track_lengths)

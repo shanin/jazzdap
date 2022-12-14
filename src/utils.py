@@ -7,14 +7,21 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as lines
 
 
-def load_config(filename):
+def load_config(filename, notebook = False):
     with open(filename) as f:
         config = yaml.safe_load(f.read())
+    
+    if notebook:
+        prefix = '/'.join(filename.split('/')[:-1])
+        for subconfig in config.keys():
+            for argument in config[subconfig].keys():
+                value = config[subconfig][argument]
+                if isinstance(value, str):
+                    if value.startswith('data/') or value.startswith('exp/'):
+                        config[subconfig][argument] = f'{prefix}/{value}'
+    
     return config
 
-#def pianoroll(melody):
-#    plt.figure(figsize=(25,5))
-#    plt.scatter(melody['onset'], melody['pitch'], marker='.')
 
 
 def transcription2onehot(transcription):
@@ -51,13 +58,6 @@ def fill_pauses(sample):
         rows.append(row)
     return pd.DataFrame(rows)
 
-def adapt_config_for_notebook(config):
-    config['shared']['exp_folder'] = '../' + config['shared']['exp_folder']
-    config['shared']['raw_data'] = '../' + config['shared']['raw_data']
-    config['dataset']['weimardb'] = '../' + config['dataset']['weimardb']
-    config['baseline']['repo'] = '../' + config['baseline']['repo']
-    config['baseline_evaluation']['output_folder'] = '../' + config['baseline_evaluation']['output_folder']
-    return config
 
 
 def comparative_pianoroll(melody, predictions, melodia, legend = True, output_file = None, title = None, scale_factor = 0.7, height = 10, eval_mel = None, eval_sfnmf = None):
