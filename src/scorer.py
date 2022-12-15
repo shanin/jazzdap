@@ -3,8 +3,16 @@ import numpy as np
 from utils import weimar2hertz
 
 #should use window size instead of hardcoded values!
+
+def strip(labels, predictions):
+    start = np.nonzero(labels)[0].min()
+    stop = np.nonzero(labels)[0].max()
+    return labels[start:stop], predictions[start:stop]
+
+
 def evaluate_sample(sample):
     labels, predictions = sample.labels, sample.predictions
+    labels, predictions = strip(labels, predictions)
     (ref_v, ref_c, est_v, est_c) = mir_eval.melody.to_cent_voicing(
         ref_time = np.arange(np.size(labels)) * (256 / 22050),
         ref_freq = weimar2hertz(labels),
