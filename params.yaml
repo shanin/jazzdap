@@ -5,7 +5,7 @@ weimar_dataset:
   raw_data_demucs: exp/preprocessed/separated
   feature_type: sfnmf    #crepe
   feature_variant: default #demucs_frontend
-  labeling_type: onsetsandframes #
+  labeling_type: crnn #
 sampler:
   cache_folder: exp/data_cache
 sfnmf_features:
@@ -32,7 +32,7 @@ onsetsandframes_model:
   feature_size: 301
   number_of_classes: 61
   num_label_channels: 3
-trainer:
+crnn_trainer:
   device: 7
   epochs_num: 200
   validation_period: 10
