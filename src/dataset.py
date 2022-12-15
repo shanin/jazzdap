@@ -31,11 +31,12 @@ class WeimarDB(Dataset):
         
         self.feature_folder = None
         if self.feature_type == 'sfnmf':
-            self.feature_folder = config['sfnmf_features'].get('sfnmf_path', None)
+            if self.feature_variant == 'demucs_frontend':
+                self.feature_folder = config['sfnmf_features'].get('demucs_sfnmf_path')
+            elif self.feature_variant == 'default':
+                self.feature_folder = config['sfnmf_features'].get('sfnmf_path', None)
         elif self.feature_type == 'crepe':
             self.feature_folder = config['crepe_features'].get('crepe_path', None)
-        elif self.feature_variant == 'demucs_frontend':
-            self.feature_folder = config['sfnmf_features'].get('demucs_sfnmf_path')
 
         if self.data_folder:
             self.raw_data_type = 'audio'
