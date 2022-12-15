@@ -106,7 +106,7 @@ class CRNNtrainer:
         for sf_input, sample in zip(self.dataset[part], self.dataset[part].dataset):
 
             predictions = self.predict(sf_input)
-            sample.generate_predictions_from_net_output(predictions)
+            sample.generate_predictions_from_net_output(predictions.detach().numpy())
             evaluation_results = evaluate_sample(sample)
             rows.append(evaluation_results)
 
