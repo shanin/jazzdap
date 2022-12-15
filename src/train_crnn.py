@@ -14,7 +14,7 @@ from trainer import CRNNtrainer
 import mlflow
 
 
-def prepare_dataset(config, sampler_type, feature_type, partition, data_tag):
+def prepare_dataset(config, partition, sampler_type, feature_type, data_tag):
 
     if sampler_type == 'inference':
         wrapper = CRNNSamplerInference
