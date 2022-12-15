@@ -101,13 +101,13 @@ class CRNNtrainer:
         return torch.cat(pred_batches, dim = 0)
 
 
-    def evaluate(self, part, step = None, log = False):
+    def evaluate(self, part, step = None, log = False, allow_negative_predictions = True):
         rows = []
         for sf_input, sample in zip(self.dataset[part], self.dataset[part].dataset):
 
             predictions = self.predict(sf_input)
             sample.generate_predictions_from_net_output(predictions)
-            evaluation_results = evaluate_sample(sample)
+            evaluation_results = evaluate_sample(sample, allow_negative_predictions)
             rows.append(evaluation_results)
 
         evaluation_results = pd.DataFrame(rows)

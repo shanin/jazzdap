@@ -10,8 +10,10 @@ def strip(labels, predictions):
     return labels[start:stop], predictions[start:stop]
 
 
-def evaluate_sample(sample):
+def evaluate_sample(sample, allow_negative_predictions = False):
     labels, predictions = sample.pitch_sequence, sample.predictions
+    if not allow_negative_predictions:
+        predictions[predictions < 0] = 0
     labels, predictions = strip(labels, predictions)
     (ref_v, ref_c, est_v, est_c) = mir_eval.melody.to_cent_voicing(
         ref_time = np.arange(np.size(labels)) * (256 / 22050),
