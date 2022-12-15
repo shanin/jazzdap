@@ -223,10 +223,10 @@ class CRNNPrediction(GenericMixinPrediction):
         self._class_to_midi()
 
     def _unfold_predictions(self):
-        if self.total_frames * self._segment_length != 0:
+        if self.num_windows * self._segment_length != 0:
             unfolded = self.predictions[:-1].reshape(-1, self.predictions.size(-1))
             unfolded_tail = self.predictions[-1].reshape(-1, self.predictions.size(-1))
-            tail_len = self.total_frames - unfolded.size(0)
+            tail_len = self.num_windows - unfolded.size(0)
             self.predictions = torch.cat([unfolded, unfolded_tail[-tail_len:]], dim = 0)
         else:
             self.predictions = self.predictions.reshape(-1, self.predictions.size(-1))
