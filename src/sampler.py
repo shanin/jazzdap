@@ -192,6 +192,24 @@ class GenericOnsetsAndFramesSampler(GenericFrameLevelSampler):
         self.sampling_rate = config[f'{self.features_type}_features']['Fs']
         self.hop = config[f'{self.features_type}_features']['hop']
 
+    def _prepare_HF0_tensor(self, features):
+        length_of_sequence = features.shape[0]
+        number_of_segments = int(floor(length_of_sequence/self.segment_length))
+
+        HF0 = np.append(
+            features[: number_of_segments * self.segment_length],
+            features[-self.segment_length: ], 
+            axis=0
+        )
+        HF0 = normalize(HF0, norm='l1', axis=1)
+
+        number_of_samples = int(HF0.shape[0] / self.segment_length)
+        HF0 = np.reshape(
+            HF0, 
+            (number_of_samples, 1, self.segment_length, self.feature_size)
+        )
+        return torch.tensor(HF0, dtype=torch.float), length_of_sequence, number_of_samples
+
     def _prepare_labels_tensor(self, labels):
         if len(labels):
             length_of_sequence = labels.shape[0]
