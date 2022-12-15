@@ -6,9 +6,10 @@ import torch.nn.functional as F
 class CRNN(nn.Module):
 
     def _parse_config(self, config):
-        self.n_classes = config['crnn'].get('number_of_classes', 62)
-        self.patch_size = config['crnn'].get('patch_size', 25)
-        self.number_of_patches = config['crnn'].get('number_of_patches', 20)
+        self.n_classes = config['crnn_model'].get('number_of_classes', 62)
+        self.patch_size = config['crnn_model'].get('patch_size', 25)
+        self.number_of_patches = config['crnn_model'].get('number_of_patches', 20)
+
 
     def __init__(self, config):
         super(CRNN, self).__init__()
