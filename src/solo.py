@@ -135,7 +135,10 @@ class GenericMixinLabeling:
         pitches = self.melody.pitch.values
         onsets = sec2step(onsets)
         offsets = sec2step(offsets)
-        return onsets, offsets, pitches
+        pitch_sequence = np.zeros(self.num_windows)
+        for onset, offset, pitch in zip(onsets, offsets, pitches):
+            pitch_sequence[int(onset) : int(offset)] = pitch
+        return pitch_sequence
 
     def _generate_labels(self):
         raise NotImplementedError
@@ -146,10 +149,8 @@ class CRNNLabeling(GenericMixinLabeling):
         lowest_note = 33 # 55Hz, A1, following SF-NMF algorithm
         highest_note = 93 # 1760Hz, A6
 
-        onsets, offsets, pitches = self._quantized_transcription()
-        pitch_sequence = np.zeros(self.num_windows)
-        for onset, offset, pitch in zip(onsets, offsets, pitches):
-            pitch_sequence[int(onset) : int(offset)] = pitch
+        self.pitch_sequence = self._quantized_transcription()
+        pitch_sequence = self.pitch_sequence # copy?
 
         pitch_sequence[pitch_sequence > highest_note] = highest_note
         pitch_sequence[pitch_sequence == 0] = lowest_note - 1
@@ -242,7 +243,6 @@ class CRNNPrediction(GenericMixinPrediction):
     def _class_to_midi(self, lowest_note = 33):
         self.predictions[self.predictions > 0] += (lowest_note - 1)
         self.predictions[self.predictions < 0] -= (lowest_note - 1)
-        self.labels[self.labels > 0] += (lowest_note - 1)
 
     def save_predictions_to_csv(self, filepath):
         cleaned_predictions = self.predictions
