@@ -150,7 +150,7 @@ class CRNNLabeling(GenericMixinLabeling):
         highest_note = 93 # 1760Hz, A6
 
         self.pitch_sequence = self._quantized_transcription()
-        pitch_sequence = self.pitch_sequence # copy?
+        pitch_sequence = self.pitch_sequence.copy() # copy?
 
         pitch_sequence[pitch_sequence > highest_note] = highest_note
         pitch_sequence[pitch_sequence == 0] = lowest_note - 1
