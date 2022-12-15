@@ -7,7 +7,7 @@ import os
 
 from torch.utils.data import DataLoader
 
-from dataset import PredictedSolo
+from solo import construct_solo_class
 from scorer import evaluate_sample
 
 
@@ -35,12 +35,8 @@ class CRNNtrainer:
     def _parse_config(self, config):
         self.epochs_num = config['crnn_trainer'].get('epochs_num', 200)
         self.batch_size = config['crnn_trainer'].get('batch_size', 64)
-        self.output_folder = os.path.join(
-            config['shared'].get('exp_folder', 'exp'),
-            config['crnn_trainer'].get('model_folder', 'models')
-        )
-        self.segment_length = config['crnn']['patch_size'] * config['crnn']['number_of_patches']
-
+        self.output_folder = config['crnn_trainer'].get('model_folder', 'models')
+        self.segment_length = config['crnn_model'].get('segment_length')
 
     def train_epoch(self):
         self.model.train()
@@ -108,17 +104,13 @@ class CRNNtrainer:
 
     def evaluate(self, part, step = None, log = False):
         rows = []
-        for sf_input, labels, track_length in self.dataset[part]:
+        for sf_input, sample in zip(self.dataset[part], self.dataset[part].dataset):
 
-            result = PredictedSolo(
-                predictions = self.predict(sf_input),
-                labels = labels,
-                track_length = track_length,
-                segment_length = self.segment_length
-            ) 
-            
-            evaluation_results = evaluate_sample(result.labels, result.predictions)
+            predictions = self.predict(sf_input),
+            sample.generate_predictions_from_net_output(predictions)
+            evaluation_results = evaluate_sample(sample)
             rows.append(evaluation_results)
+
         evaluation_results = pd.DataFrame(rows)
 
         if log:
@@ -159,7 +151,3 @@ class CRNNtrainer:
         filename = model_list[-1]
         print(f'loaded {filename}')
         self.load_model(os.path.join(self.output_folder, filename))
-
-            
-
-

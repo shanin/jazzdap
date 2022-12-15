@@ -1,5 +1,5 @@
 weimar_dataset:
-  data_variant: raw_data    #could be changed to raw_data_demucs
+  data_variant: noaudio #raw_data    #could be changed to raw_data_demucs
   weimardb: data/raw/weimar/wjazzd.db
   raw_data: data/raw/weimar/wjd_solos
   raw_data_demucs: exp/preprocessed/separated
@@ -27,8 +27,13 @@ crnn_model:
   step_notes: 5
   RNN: GRU
   number_of_channels: 1
+onsetsandframes_model:
+  segment_length: 500
+  feature_size: 301
+  number_of_classes: 61
+  num_label_channels: 3
 trainer:
-  device: 3
+  device: 7
   epochs_num: 200
   validation_period: 10
   batch_size: 64

@@ -4,32 +4,27 @@ import numpy as np
 import torch
 
 from utils import load_config
-from dataset import WeimarDB, WeimarCollated, WeimarSeparate
+
+from dataset import WeimarDB
+from sampler import CRNNSamplerInference, CRNNSamplerTraining
+
 from model import CRNN
 from trainer import CRNNtrainer
 
 import mlflow
 
 
-def prepare_dataset(config, partition, wrapper_type, feature_type, data_tag):
+def prepare_dataset(config, sampler_type, feature_type, partition, data_tag):
 
-    if wrapper_type == 'separated':
-        wrapper = WeimarSeparate
+    if sampler_type == 'inference':
+        wrapper = CRNNSamplerInference
     else:
-        wrapper = WeimarCollated
-
-    if feature_type == 'sfnmf':
-        load_sfnmf, load_crepe = True, False
-    elif feature_type == 'crepe':
-        load_sfnmf, load_crepe = False, True
+        wrapper = CRNNSamplerTraining
 
     dataset = wrapper(
         WeimarDB(
             config,
-            partition = partition,
-            load_sfnmf=load_sfnmf,
-            load_crepe=load_crepe, 
-            load_audio=False
+            partition = partition
         ), config,
         tag = f'{partition}-{feature_type}-{data_tag}'
     )
@@ -70,12 +65,12 @@ def setup_criterion(config):
 def setup_trainer(config, 
                   model, 
                   partitions = ['train', 'test', 'val', 'val'],
-                  modes = ['collated', 'separated', 'collated', 'separated'],
+                  modes = ['train', 'inference', 'train', 'inference'],
                   feature_type = None,
                   test_time_dataset = None):
     
     if not feature_type:
-        feature_type = config['crnn_trainer'].get('features', 'sfnmf')
+        feature_type = config['weimar_dataset'].get('feature_type', 'sfnmf')
     parameters = model.parameters()
     if test_time_dataset:
         dataset_dict = test_time_dataset
