@@ -37,6 +37,7 @@ class SoloSampler(Dataset):
             labels = sample.labels if hasattr(sample, 'labels') else []
 
             if not self.test_time:
+                print('to cut', (not self.test_time))
                 features, labels = self._cut(sample, features, labels)
             
             HF0_tensor, hf0_len, samples = self._prepare_HF0_tensor(features)
