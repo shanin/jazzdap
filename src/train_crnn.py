@@ -21,6 +21,9 @@ def prepare_dataset(config, partition, sampler_type, feature_type, data_tag):
     else:
         sampler = CRNNSamplerTraining
 
+    test_time = (sampler_type == 'inference')
+    print('test_time', test_time)
+
     dataset = sampler(
         WeimarDB(
             config,
@@ -28,7 +31,7 @@ def prepare_dataset(config, partition, sampler_type, feature_type, data_tag):
         ), 
         config,
         tag = f'{partition}-{feature_type}-{data_tag}',
-        test_time = (sampler_type == 'inference')
+        test_time = test_time
     )
     
     return dataset
