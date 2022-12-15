@@ -27,7 +27,7 @@ def prepare_dataset(config, partition, sampler_type, feature_type, data_tag):
             partition = partition
         ), 
         config,
-        tag = f'{partition}-{feature_type}-{data_tag}'
+        tag = f'{partition}-{feature_type}-{data_tag}',
         test_time = (sampler_type == 'inference')
     )
     
