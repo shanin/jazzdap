@@ -17,16 +17,18 @@ import mlflow
 def prepare_dataset(config, partition, sampler_type, feature_type, data_tag):
 
     if sampler_type == 'inference':
-        wrapper = CRNNSamplerInference
+        sampler = CRNNSamplerInference
     else:
-        wrapper = CRNNSamplerTraining
+        sampler = CRNNSamplerTraining
 
-    dataset = wrapper(
+    dataset = sampler(
         WeimarDB(
             config,
             partition = partition
-        ), config,
+        ), 
+        config,
         tag = f'{partition}-{feature_type}-{data_tag}'
+        test_time = (sampler_type == 'inference')
     )
     
     return dataset
