@@ -59,7 +59,6 @@ class CRNNtrainer:
 
             loss.backward()
 
-
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
             self.optimizer.step()
 
@@ -106,7 +105,7 @@ class CRNNtrainer:
         rows = []
         for sf_input, sample in zip(self.dataset[part], self.dataset[part].dataset):
 
-            predictions = self.predict(sf_input),
+            predictions = self.predict(sf_input)
             sample.generate_predictions_from_net_output(predictions)
             evaluation_results = evaluate_sample(sample)
             rows.append(evaluation_results)
