@@ -233,6 +233,7 @@ class CRNNPrediction(GenericMixinPrediction):
             self.predictions = self.predictions.reshape(-1, self.predictions.size(-1))
 
     def _aggregate_predictions(self):
+        self.predictions = self.predictions.detach().numpy()
         voiced_frames = (np.argmax(self.predictions, axis = 1) > 0).astype(int)
         pitch_class = np.argmax(self.predictions[:, 1:], axis = 1) + 1
         pitch_class = pitch_class - 2 * (1 - voiced_frames) * pitch_class
