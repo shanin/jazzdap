@@ -223,7 +223,8 @@ class CRNNPrediction(GenericMixinPrediction):
         self._class_to_midi()
 
     def _unfold_predictions(self):
-        if self.num_windows * self._segment_length != 0:
+        segment_length = self.predictions.shape[-2] * self.predictions.shape[-3]
+        if self.num_windows % segment_length != 0:
             unfolded = self.predictions[:-1].reshape(-1, self.predictions.size(-1))
             unfolded_tail = self.predictions[-1].reshape(-1, self.predictions.size(-1))
             tail_len = self.num_windows - unfolded.size(0)
