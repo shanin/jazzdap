@@ -372,14 +372,15 @@ class WeimarInit(MixinInit):
         self._parse_melody()
         self._parse_beats()
 
-        if issubclass(self.__class__, Audio):
+        # duck typing!
+        if hasattr(self, '_load_audio'):
             filename = os.path.join(
                 self.audio_folder,
                 f'{self.filename_solo}.wav'
             )
             self._load_audio(filename)
 
-        if issubclass(self.__class__, GenericMixinFeatures):
+        if hasattr(self, '_load_features'):
             feature_filename = os.path.join(
                 self.features_folder, 
                 f'{str(self.melid).zfill(3)}.npy'
@@ -389,7 +390,7 @@ class WeimarInit(MixinInit):
             else:
                 self._generate_features()
 
-        if issubclass(self.__class__, GenericMixinLabeling):
+        if hasattr(self, '_generate_labels'):
             self._generate_labels()
 
     def __str__(self):
@@ -397,6 +398,10 @@ class WeimarInit(MixinInit):
     
     def __repr__(self):
         return(f'{self.performer} ({self.instrument}) - {self.title} (from {self.filename})')
+
+class FilosaxInit(MixinInit):
+    pass
+
 
 # Several ready classes
 class SfnmfCRNNSolo(WeimarInit, SfnmfFeatures, CRNNLabeling, CRNNPrediction):
