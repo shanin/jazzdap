@@ -5,7 +5,7 @@ weimar_dataset:
   raw_data_demucs: exp/preprocessed/separated
   feature_type: sfnmf    #crepe
   feature_variant: default #demucs_frontend
-  labeling_type: crnn #
+  labeling_type: onsetsandframes #
 sampler:
   cache_folder: exp/data_cache
 sfnmf_features:
