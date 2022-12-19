@@ -50,8 +50,8 @@ class GenericTrainer:
             )
             self.train_epoch()
             self.calculate_validation_loss(epoch_num)
-            eval_validation = self.evaluate("val-separated", epoch_num, log=True)
-            self.evaluate("test-separated", epoch_num, log=True)
+            eval_validation = self.evaluate("val-inference", epoch_num, log=True)
+            self.evaluate("test-inference", epoch_num, log=True)
             self.scheduler.step()
             if eval_validation["Overall Accuracy"].mean() > self.current_val_oa:
                 self.current_val_oa = eval_validation["Overall Accuracy"].mean()
@@ -119,7 +119,7 @@ class CRNNtrainer(GenericTrainer):
         self.model.train()
 
         train_dataloader = DataLoader(
-            self.dataset["train-collated"], self.batch_size, shuffle=True
+            self.dataset["train-training"], self.batch_size, shuffle=True
         )
 
         for x, y in train_dataloader:
@@ -145,7 +145,7 @@ class CRNNtrainer(GenericTrainer):
         loss_batches = []
 
         val_dataloader = DataLoader(
-            self.dataset["val-collated"], self.batch_size, shuffle=False
+            self.dataset["val-training"], self.batch_size, shuffle=False
         )
 
         with torch.no_grad():
@@ -186,7 +186,7 @@ class OnsetsAndFramesTrainer(GenericTrainer):
         self.model.train()
 
         train_dataloader = DataLoader(
-            self.dataset["train-collated"], self.batch_size, shuffle=True
+            self.dataset["train-training"], self.batch_size, shuffle=True
         )
 
         for x, y in train_dataloader:

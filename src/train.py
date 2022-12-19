@@ -88,10 +88,13 @@ def setup_scheduler(config, optimizer):
     return torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
 
 
-def setup_criterion(config):
-    label_smoothing = config.get("label_smoothing", 0)
-    mlflow.log_param("label_smoothing", label_smoothing)
-    return torch.nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+def setup_criterion(config, trainer_name):
+    if trainer_name == 'crnn_trainer':
+        label_smoothing = config[trainer_name].get("label_smoothing", 0)
+        mlflow.log_param("label_smoothing", label_smoothing)
+        return torch.nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+    elif trainer_name == 'onsetsandframes_trainer':
+        return torch.nn.BCEWithLogitsLoss(reduction="none")
 
 
 def setup_trainer(
@@ -102,7 +105,7 @@ def setup_trainer(
     inference_sampler=CRNNSamplerInference,
     training_class=CRNNSamplerInference,
     partitions=["train", "test", "val", "val"],
-    modes=["train", "inference", "train", "inference"],
+    modes=["training", "inference", "training", "inference"],
     feature_type="sfnmf",
     test_time_dataset=None,
 ):
@@ -115,7 +118,7 @@ def setup_trainer(
             config, trainer_name, partitions, modes, feature_type, inference_sampler, training_class
         )
     device = setup_device(config[trainer_name])
-    criterion = setup_criterion(config[trainer_name])
+    criterion = setup_criterion(config, trainer_name)
     optimizer = setup_optimizer(config[trainer_name], parameters)
     scheduler = setup_scheduler(config[trainer_name], optimizer)
 
