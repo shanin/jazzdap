@@ -202,7 +202,7 @@ class OnsetsAndFramesTrainer(GenericTrainer):
             self.criterion = torch.nn.BCEWithLogitsLoss(reduction="none")
             onsets_loss = self.criterion(onsets_pred, y[:, 0, :, :])
             frames_loss = self.criterion(frames_pred, y[:, 1, :, :]) * y[:, 2, :, :]
-            loss = onsets_loss + frames_loss
+            loss = torch.sum(onsets_loss + frames_loss)
 
             loss.backward()
 
