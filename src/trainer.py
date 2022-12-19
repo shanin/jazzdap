@@ -7,6 +7,8 @@ import os
 
 from torch.utils.data import DataLoader
 
+import logging
+
 
 class GenericTrainer:
     def __init__(
@@ -209,7 +211,7 @@ class OnsetsAndFramesTrainer(GenericTrainer):
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
             self.optimizer.step()
 
-            print(onsets_loss.item(), frames_loss.item(), loss.item())
+            logging.debug(f'train_loss: {loss.item()}')
             # mlflow.log_metric('train_loss', loss.item(), self.step_counter)
             self.step_counter += 1
 
