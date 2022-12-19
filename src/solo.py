@@ -13,6 +13,8 @@ import IPython.display as ipd
 from wjd_constants import *
 from sourcefilter import extract_f0
 
+import logging
+
 
 class Audio:
     """
@@ -175,15 +177,17 @@ class OnsetsAndFramesLabeling(GenericMixinLabeling):
         raw_frames = np.zeros((self.num_windows, highest_note - lowest_note + 1))
         frame_weights = np.ones((self.num_windows, highest_note - lowest_note + 1))
         for onset, offset, pitch in zip(onsets, offsets, pitches):
+
             pitch_class = int(min(pitch, highest_note) - lowest_note)
             raw_onsets[int(onset) : int(onset) + onset_windows, pitch_class] = 1
             raw_frames[int(onset) : int(offset), pitch_class] = 1
             frame_weights[
                 int(onset) : int(onset) + onset_windows, pitch_class
             ] = scaling_const
-            frame_weights[
-                int(onset) + onset_windows : int(offset), pitch_class
-            ] = weights[: int(offset) - int(onset) - onset_windows]
+            if int(offset) - int(onset) - onset_windows > 0:
+                frame_weights[
+                    int(onset) + onset_windows : int(offset), pitch_class
+                ] = weights[: int(offset) - int(onset) - onset_windows]
 
         self.labels = np.stack([raw_onsets, raw_frames, frame_weights], axis=2)
         self.labels_channel_names = ["onsets", "frames", "weights"]
