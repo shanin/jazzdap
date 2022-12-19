@@ -50,9 +50,9 @@ def prepare_dataset(
 
 
 def setup_dataset_dict(
-    config, parts, types, feature_type, inference_sampler, training_class
+    config, trainer_name, parts, types, feature_type, inference_sampler, training_class
 ):
-    data_tag = config.get("data_tag", "default")
+    data_tag = config[trainer_name].get("data_tag", "default")
     dataset_dict = {}
     for part, type in zip(parts, types):
         print(f"loading partition: {part}-{feature_type}-{type}")
@@ -96,6 +96,7 @@ def setup_criterion(config):
 
 def setup_trainer(
     config,
+    trainer_name,
     model=None,
     trainer_class=CRNNtrainer,
     inference_sampler=CRNNSamplerInference,
@@ -111,12 +112,12 @@ def setup_trainer(
         dataset_dict = test_time_dataset
     else:
         dataset_dict = setup_dataset_dict(
-            config, partitions, modes, feature_type, inference_sampler, training_class
+            config, trainer_name, partitions, modes, feature_type, inference_sampler, training_class
         )
-    device = setup_device(config)
-    criterion = setup_criterion(config)
-    optimizer = setup_optimizer(config, parameters)
-    scheduler = setup_scheduler(config, optimizer)
+    device = setup_device(config[trainer_name])
+    criterion = setup_criterion(config[trainer_name])
+    optimizer = setup_optimizer(config[trainer_name], parameters)
+    scheduler = setup_scheduler(config[trainer_name], optimizer)
 
     trainer = trainer_class(
         device=device,
@@ -134,7 +135,8 @@ def setup_trainer(
 
 def setup_crnn_trainer(config):
     return setup_trainer(
-        config["crnn_trainer"],
+        config,
+        "crnn_trainer",
         CRNN(config),
         CRNNtrainer,
         CRNNSamplerInference,
@@ -143,7 +145,8 @@ def setup_crnn_trainer(config):
 
 def setup_onf_trainer(config):
     return setup_trainer(
-        config["onsetsandframes_trainer"],
+        config,
+        "onsetsandframes_trainer",
         OnsetsAndFrames(config),
         OnsetsAndFramesTrainer,
         OnsetsAndFramesSamplerInference,
