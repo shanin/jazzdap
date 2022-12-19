@@ -6,6 +6,8 @@ import sqlite3
 from solo import construct_solo_class
 from wjd_constants import *
 
+import logging
+
 
 class WeimarDB(Dataset):
     def __init__(
@@ -81,6 +83,8 @@ class WeimarDB(Dataset):
             raw_data_type=self.raw_data_type,
             labeling_type=self.labeling_type,
         )
+
+        logging.debug(f'loading solo {idx}, melid {self._melid_list[idx]}')
 
         solo = CustomSolo(
             melid=self._melid_list[idx],
