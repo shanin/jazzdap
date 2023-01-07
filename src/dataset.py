@@ -84,7 +84,7 @@ class WeimarDB(Dataset):
             labeling_type=self.labeling_type,
         )
 
-        logging.debug(f'loading solo {idx}, melid {self._melid_list[idx]}')
+        logging.debug(f"loading solo {idx}, melid {self._melid_list[idx]}")
 
         solo = CustomSolo(
             melid=self._melid_list[idx],

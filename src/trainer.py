@@ -211,7 +211,7 @@ class OnsetsAndFramesTrainer(GenericTrainer):
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
             self.optimizer.step()
 
-            logging.debug(f'train_loss: {loss.item()}')
+            logging.debug(f"train_loss: {loss.item()}")
             # mlflow.log_metric('train_loss', loss.item(), self.step_counter)
             self.step_counter += 1
 

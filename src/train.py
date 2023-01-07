@@ -89,11 +89,11 @@ def setup_scheduler(config, optimizer):
 
 
 def setup_criterion(config, trainer_name):
-    if trainer_name == 'crnn_trainer':
+    if trainer_name == "crnn_trainer":
         label_smoothing = config[trainer_name].get("label_smoothing", 0)
         mlflow.log_param("label_smoothing", label_smoothing)
         return torch.nn.CrossEntropyLoss(label_smoothing=label_smoothing)
-    elif trainer_name == 'onsetsandframes_trainer':
+    elif trainer_name == "onsetsandframes_trainer":
         return torch.nn.BCEWithLogitsLoss(reduction="none")
 
 
@@ -115,7 +115,13 @@ def setup_trainer(
         dataset_dict = test_time_dataset
     else:
         dataset_dict = setup_dataset_dict(
-            config, trainer_name, partitions, modes, feature_type, inference_sampler, training_class
+            config,
+            trainer_name,
+            partitions,
+            modes,
+            feature_type,
+            inference_sampler,
+            training_class,
         )
     device = setup_device(config[trainer_name])
     criterion = setup_criterion(config, trainer_name)
@@ -146,6 +152,7 @@ def setup_crnn_trainer(config):
         CRNNSamplerTraining,
     )
 
+
 def setup_onf_trainer(config):
     return setup_trainer(
         config,
@@ -155,6 +162,7 @@ def setup_onf_trainer(config):
         OnsetsAndFramesSamplerInference,
         OnsetsAndFramesSamplerTraining,
     )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

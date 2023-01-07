@@ -1,7 +1,7 @@
 WDB_SIZE = 456
 
 MISTAKES = {
-    'DickieWells_Jo-Jo_Orig': 'DickieWells_Jo=Jo_Orig',
+    "DickieWells_Jo-Jo_Orig": "DickieWells_Jo=Jo_Orig",
     "BobBerg_ IDidn'tKnowWhatTimeItWas_Orig": "BobBerg_IDidn'tKnowWhatTimeItWas_Orig",
     "Bob Berg_SecondSightEnterTheSpirit_Orig": "BobBerg_SecondSightEnterTheSpirit_Orig",
     "DexterGordon_Society Red_Orig": "DexterGordon_SocietyRed_Orig",
@@ -13,7 +13,7 @@ MISTAKES = {
     "MilesDavis_Eighty-One_Orig": "MilesDavis_Eighty=One_Orig",
     "Dave Holland_TakeTheColtrane_Orig": "DaveHolland_TakeTheColtrane_Orig",
     "ChrisPotter_InASentimentalMood_Orig": "ChrisPotter_InaSentimentalMood_Orig",
-    "MilesDavis_Gingerbreadboy_Orig": "MilesDavis_GingerbreadBoy_Orig" 
+    "MilesDavis_Gingerbreadboy_Orig": "MilesDavis_GingerbreadBoy_Orig",
 }
 
 SOLO_MISTAKES = {
@@ -26,10 +26,10 @@ SOLO_MISTAKES = {
     "DizzyGillespie_Blue'NBoogie_Solo": "DizzyGillespie_Blue'nBoogie_Solo",
     "EricDolphy_Aisha_solo": "EricDolphy_Aisha_Solo",
     "KidOry_Who'sit_Solo": "KidOry_Who'sIt_Solo",
-    "WayneShorter_JuJu_Solo": "WayneShorter_Juju_Solo"
+    "WayneShorter_JuJu_Solo": "WayneShorter_Juju_Solo",
 }
 
-SOLO_PATCH_FILES = ['LouisArmstrong_CornetChopSuey_Solo']
+SOLO_PATCH_FILES = ["LouisArmstrong_CornetChopSuey_Solo"]
 
 SOLOSTART_CORRECTIONS = {
     43: 29.9,
@@ -38,38 +38,91 @@ SOLOSTART_CORRECTIONS = {
     82: -93.1722,
     171: -64.85,
     309: -212.5,
-    382: 205.9
+    382: 205.9,
 }
 
 TRAIN_ARTISTS = [
-    'Art Pepper', 'Benny Carter', 'Benny Goodman', 'Bix Beiderbecke', 
-    'Bob Berg', 'Branford Marsalis', 'Buck Clayton', 'Charlie Parker', 
-    'Chet Baker', 'Clifford Brown', 'Coleman Hawkins', 'Curtis Fuller', 
-    'David Liebman', 'David Murray', 'Dickie Wells', 'Dizzy Gillespie', 
-    'Don Byas', 'Don Ellis', 'Eric Dolphy', 'Freddie Hubbard', 
-    'Gerry Mulligan', 'Hank Mobley', 'Harry Edison', 
-    'Henry Allen', 'Herbie Hancock', 'J.C. Higginbotham', 'J.J. Johnson', 
-    'Joe Lovano', 'John Abercrombie', 'Johnny Dodds', 'Johnny Hodges', 
-    'Joshua Redman', 'Kai Winding', 'Kenny Dorham', 'Kenny Garrett', 
-    'Kid Ory', 'Lee Konitz', 'Lee Morgan', 'Lester Young', 'Lionel Hampton', 
-    'Louis Armstrong', 'Michael Brecker', 'Miles Davis', 'Milt Jackson', 
-    'Ornette Coleman', 'Pat Martino', 'Pat Metheny', 
-    'Pepper Adams', 'Red Garland', 'Rex Stewart', 
-    'Roy Eldridge', 'Sonny Stitt', 'Stan Getz', 'Steve Coleman', 
-    'Steve Lacy', 'Steve Turre', 'Von Freeman', 'Warne Marsh', 
-    'Wayne Shorter', 'Woody Shaw', 'Zoot Sims'
+    "Art Pepper",
+    "Benny Carter",
+    "Benny Goodman",
+    "Bix Beiderbecke",
+    "Bob Berg",
+    "Branford Marsalis",
+    "Buck Clayton",
+    "Charlie Parker",
+    "Chet Baker",
+    "Clifford Brown",
+    "Coleman Hawkins",
+    "Curtis Fuller",
+    "David Liebman",
+    "David Murray",
+    "Dickie Wells",
+    "Dizzy Gillespie",
+    "Don Byas",
+    "Don Ellis",
+    "Eric Dolphy",
+    "Freddie Hubbard",
+    "Gerry Mulligan",
+    "Hank Mobley",
+    "Harry Edison",
+    "Henry Allen",
+    "Herbie Hancock",
+    "J.C. Higginbotham",
+    "J.J. Johnson",
+    "Joe Lovano",
+    "John Abercrombie",
+    "Johnny Dodds",
+    "Johnny Hodges",
+    "Joshua Redman",
+    "Kai Winding",
+    "Kenny Dorham",
+    "Kenny Garrett",
+    "Kid Ory",
+    "Lee Konitz",
+    "Lee Morgan",
+    "Lester Young",
+    "Lionel Hampton",
+    "Louis Armstrong",
+    "Michael Brecker",
+    "Miles Davis",
+    "Milt Jackson",
+    "Ornette Coleman",
+    "Pat Martino",
+    "Pat Metheny",
+    "Pepper Adams",
+    "Red Garland",
+    "Rex Stewart",
+    "Roy Eldridge",
+    "Sonny Stitt",
+    "Stan Getz",
+    "Steve Coleman",
+    "Steve Lacy",
+    "Steve Turre",
+    "Von Freeman",
+    "Warne Marsh",
+    "Wayne Shorter",
+    "Woody Shaw",
+    "Zoot Sims",
 ]
 
 
-VAL_ARTISTS = [
-    'Nat Adderley', 'George Coleman', 'Phil Woods'
-]
+VAL_ARTISTS = ["Nat Adderley", "George Coleman", "Phil Woods"]
 
 TEST_ARTISTS = [
-    'Ben Webster', 'Cannonball Adderley', 'Charlie Shavers', 'Chu Berry', 
-    'Chris Potter', 'Dexter Gordon', 'Fats Navarro', 'Joe Henderson', 
-    'John Coltrane', 'Kenny Wheeler', 'Paul Desmond', 'Sidney Bechet', 
-    'Sonny Rollins', 'Wynton Marsalis'
+    "Ben Webster",
+    "Cannonball Adderley",
+    "Charlie Shavers",
+    "Chu Berry",
+    "Chris Potter",
+    "Dexter Gordon",
+    "Fats Navarro",
+    "Joe Henderson",
+    "John Coltrane",
+    "Kenny Wheeler",
+    "Paul Desmond",
+    "Sidney Bechet",
+    "Sonny Rollins",
+    "Wynton Marsalis",
 ]
 
 # these tracks should be omitted from test to maintain compatibility with 2019 results
@@ -78,41 +131,105 @@ TEST_STOPLIST = {
     82: "ChrisPotter_PopTune#1_Solo",
     223: "JohnColtrane_GiantSteps-2_Solo",
     259: "KennyWheeler_PassItOn_Solo",
-    382: "SonnyRollins_I'llRememberApril_AlternateTake2_Solo"
+    382: "SonnyRollins_I'llRememberApril_AlternateTake2_Solo",
 }
 
 
 INSTRUMENTS = [
-    'cl', 'as', 'ts', 'cor', 'tp', 'tb', 'ss', 'bcl', 'bs', 'p',
-    'ts-c', 'g', 'vib'
+    "cl",
+    "as",
+    "ts",
+    "cor",
+    "tp",
+    "tb",
+    "ss",
+    "bcl",
+    "bs",
+    "p",
+    "ts-c",
+    "g",
+    "vib",
 ]
 
 MELODY_COLNAMES = [
-    'eventid', 'melid', 'onset', 'pitch', 'duration', 'period', 
-    'division', 'bar', 'beat', 'tatum', 'subtatum', 'num', 'denom', 
-    'beatprops', 'beatdur', 'tatumprops', 'loud_max', 'loud_med', 
-    'loud_sd', 'loud_relpos', 'loud_cent', 'loud_s2b', 'f0_mod', 
-    'f0_range', 'f0_freq_hz', 'f0_med_dev'
+    "eventid",
+    "melid",
+    "onset",
+    "pitch",
+    "duration",
+    "period",
+    "division",
+    "bar",
+    "beat",
+    "tatum",
+    "subtatum",
+    "num",
+    "denom",
+    "beatprops",
+    "beatdur",
+    "tatumprops",
+    "loud_max",
+    "loud_med",
+    "loud_sd",
+    "loud_relpos",
+    "loud_cent",
+    "loud_s2b",
+    "f0_mod",
+    "f0_range",
+    "f0_freq_hz",
+    "f0_med_dev",
 ]
 
 SOLO_INFO_COLNAMES = [
-    'melid', 'trackid', 'compid', 'recordid', 'performer', 'title', 
-    'titleaddon', 'solopart', 'instrument', 'style', 'avgtempo', 
-    'tempoclass', 'rhythmfeel', 'key', 'signature', 'chord_changes', 
-    'chorus_count'
+    "melid",
+    "trackid",
+    "compid",
+    "recordid",
+    "performer",
+    "title",
+    "titleaddon",
+    "solopart",
+    "instrument",
+    "style",
+    "avgtempo",
+    "tempoclass",
+    "rhythmfeel",
+    "key",
+    "signature",
+    "chord_changes",
+    "chorus_count",
 ]
 
 TRANSCRIPTION_INFO_COLNAMES = [
-    'melid', 'trackid', 'filename_sv', 'filename_solo', 
-    'solotime', 'solostart_sec', 'status'
+    "melid",
+    "trackid",
+    "filename_sv",
+    "filename_solo",
+    "solotime",
+    "solostart_sec",
+    "status",
 ]
 
 TRACK_INFO_COLNAMES = [
-    'trackid', 'compid', 'recordid', 'filename_track', 'lineup',
-    'mbzid', 'trackno', 'recordingdate'
+    "trackid",
+    "compid",
+    "recordid",
+    "filename_track",
+    "lineup",
+    "mbzid",
+    "trackno",
+    "recordingdate",
 ]
 
 BEATS_COLNAMES = [
-    'beatid', 'melid', 'onset', 'bar', 'beat', 'signature', 'chord',
-    'form', 'bass_pitch', 'chorus_id'
+    "beatid",
+    "melid",
+    "onset",
+    "bar",
+    "beat",
+    "signature",
+    "chord",
+    "form",
+    "bass_pitch",
+    "chorus_id",
 ]
